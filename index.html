@@ -579,6 +579,8 @@ function composeSheet(make,fl,pxPerMm){
     R.circle(c[0],c[1],r,{w:0.3});
     R.poly([[c[0]+Math.cos(a0)*r,c[1]+Math.sin(a0)*r],[c[0]+Math.cos(a0+2.6)*r*0.45,c[1]+Math.sin(a0+2.6)*r*0.45],[c[0]+Math.cos(a0-2.6)*r*0.45,c[1]+Math.sin(a0-2.6)*r*0.45]],{close:true,fill:'#111',w:0.2});
     R.text(c[0]+Math.cos(a0)*r*1.7,c[1]+Math.sin(a0)*r*1.7,'N',{size:2.4,weight:700});}
+  /* fixed imprint: sits in the bottom margin on every export, not editable from the UI */
+  {const q=mm(W/2,H-Math.max(2.6,M/2));R.text(q[0],q[1],'©  K I R K L A N D  &  S U N S H I N E   ·   K & S  G R U N D W E R K',{size:1.8,col:'#555',weight:500,font:'"Jost","Noto Sans SC",sans-serif'});}
   return {R,sp};
 }
 
