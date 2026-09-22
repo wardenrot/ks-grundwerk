@@ -537,7 +537,7 @@ function sheetSpec(fl){
   const b=bounds(fl.objs),bw=b.x1-b.x0+0.6,bh=b.y1-b.y0+0.6,m=P.margin;
   let W,H;
   if(P.sheet==='fit'){W=0;H=0;}else{[W,H]=SHEETS[P.sheet];const o=P.orient==='auto'?(bw/bh>1.15?'l':'p'):P.orient;if((o==='l')!==(W>H))[W,H]=[H,W];}
-  const legendN=P.legend?legendItems(fl).length:0,cols0=(W>=140&&legendN>6)?2:1,legendH=legendN?Math.ceil(legendN/cols0)*4.2+6:0;
+  const lit=P.legend?legendItems(fl):[],legendN=lit.length,cols0=legendCols(lit,W-2*m),legendH=legendN?Math.ceil(legendN/cols0)*4.2+6:0;
   const titleH=P.tName||P.tSub?13:0,footH=(P.scalebar?9:0)+legendH;
   let denom;
   if(W){const aw=W-2*m,ah=H-2*m-titleH-footH,ex=Math.max(bw/aw,bh/ah)*1000;denom=P.scaleMode==='auto'?NICE.find(n=>n>=ex)||1000:+P.scaleMode;}
@@ -545,6 +545,8 @@ function sheetSpec(fl){
   const mmPerM=1000/denom,dw=bw*mmPerM,dh=bh*mmPerM,aw=W-2*m,ah=H-2*m-titleH-footH;
   return {W,H,m,denom,mmPerM,b,titleH,footH,legendH,dx:m+(aw-dw)/2-(b.x0-0.3)*mmPerM,dy:m+titleH+(ah-dh)/2-(b.y0-0.3)*mmPerM,overflow:dw>aw+0.5||dh>ah+0.5};
 }
+const strMM=t=>[...t].reduce((a,c)=>a+(/[\u2e80-\u9fff\uff00-\uffef]/.test(c)?2.5:1.3),0);
+function legendCols(items,avail){if(items.length<=6||avail<130)return 1;const mx=Math.max(...items.map(strMM));return mx<=avail/2-4?2:1;}
 function legendItems(fl){
   const it=[];const rs=fl.objs.filter(o=>o.t==='room');
   if(P.numbering)rs.forEach((r,i)=>{if(r.kind!=='court'||r.note)it.push(circ(i+1)+' '+r.name+(r.note?' — '+r.note:''));});
@@ -566,7 +568,7 @@ function composeSheet(make,fl,pxPerMm){
     const l=mm(M,M+12);R.line(l[0],l[1],l[0]+(W-2*M)/sp.mmPerM,l[1],{w:0.4});}
   drawFloor(R,fl,{});
   let y=H-M-(P.scalebar?8:0);
-  if(sp.legendH){const items=legendItems(fl),cols=(W>=140&&items.length>6)?2:1,rows=Math.ceil(items.length/cols),colW=(W-2*M)/cols;y-=sp.legendH;const l=mm(M,y+1);R.line(l[0],l[1],l[0]+(W-2*M)/sp.mmPerM,l[1],{w:0.3});
+  if(sp.legendH){const items=legendItems(fl),cols=legendCols(items,W-2*M),rows=Math.ceil(items.length/cols),colW=(W-2*M)/cols;y-=sp.legendH;const l=mm(M,y+1);R.line(l[0],l[1],l[0]+(W-2*M)/sp.mmPerM,l[1],{w:0.3});
     items.forEach((s,i)=>{const c=Math.floor(i/rows),r=i%rows,p=mm(M+c*colW,y+5+r*4.2);R.text(p[0],p[1],s,{size:2.5,align:'left'});});}
   if(P.scalebar){const y0=H-M-4,x0=M,segs=[0,1,2,3,4,5],u=sp.mmPerM;const a=mm(x0,y0);
     for(let i=0;i<5;i++){const p=mm(x0+i*u,y0-1.2);R.rect(p[0],p[1],1,1.2/sp.mmPerM,{fill:i%2?'#fff':'#111',w:0.25});}
@@ -837,43 +839,70 @@ $('btnSample').onclick=()=>{P=sample();cur=0;sel=null;syncUI();renderProps();com
 
 /* ================= sample ================= */
 function sample(){
-  const f=newFloor('三楼'),o=f.objs,add=x=>{x.id=nid();o.push(x);return x;};
-  const R=(x,y,w,h,name,note,kind)=>add({t:'room',x,y,w,h,name,note:note||'',kind:kind||'room'});
-  const hall=R(0,0,1.5,4,'玄关'),liv=R(1.5,0,4.5,4,'客厅','案发当晚聚会所在'),kit=R(6,0,3,2.5,'厨房'),bath=R(6,2.5,3,1.5,'浴室','门从内反锁');
-  const bed=R(0,4,3.5,3.5,'主卧','房东夫妇'),study=R(3.5,4,2.5,3.5,'书房','发现尸体处'),guest=R(6,4,3,3.5,'客房','访客 K 借宿');
-  const balc=R(1.5,-1.2,4.5,1.2,'阳台','','balcony');
-  const D=(room,oo,out,pos,kind,side,hinge,len)=>add({t:'open',kind:kind||'door',room:room.id,o:oo,out,pos,len:len||(kind==='double'?1.6:kind==='window'?1.2:0.9),side:side||-out,hinge:hinge||1});
-  D(hall,'v',-1,2.0,'door',1,-1);            // front door on the west wall of the hall
-  D(hall,'v',1,2.6,'arch',-1,1,1.2);         // hall → living
-  D(liv,'v',1,1.2,'door',1,1);               // living → kitchen
-  D(bath,'v',-1,3.25,'door',-1,-1,0.8);      // living → bath
-  D(bed,'h',-1,2.5,'door',1,-1);             // living → bedroom
-  D(study,'h',-1,4.6,'door',1,1,0.8);        // living → study
-  D(guest,'h',-1,7.2,'door',1,-1);           // living → guest
-  D(liv,'h',-1,4.0,'sliding',1,1,1.8);       // living → balcony
-  D(kit,'h',-1,7.6,'window',0,0,1.2);D(bed,'h',1,1.5,'window',0,0,1.5);D(study,'h',1,4.75,'window',0,0,1.2);D(guest,'v',1,5.5,'window',0,0,1.2);D(bath,'v',1,3.3,'window',0,0,0.6);
-  const Fn=(kind,x,y,rot,label,w,h)=>{const c=catById(kind);return add({t:'furn',kind,x,y,rot:rot||0,label:label||'',w:w||c.w,h:h||c.h});};
-  Fn('bed2',1.0,5.4,90);Fn('wardrobe',2.8,6.9,0);Fn('desk',5.0,4.5,0);Fn('chair',5.0,5.05,180);Fn('shelf',3.7,5.6,90);Fn('shelf',3.7,6.5,90);
-  Fn('bed1',8.4,5.6,0);Fn('desk',6.8,7.1,0);Fn('sofa',2.9,2.0,0);Fn('tableR',4.6,2.0,0,'',0.8,0.8);Fn('tv',2.9,0.4,0);Fn('rug',3.7,2.2,0,'',2.6,1.8);
-  Fn('counter',6.7,0.4,0,'',1.4,0.6);Fn('stove',7.7,0.4,0);Fn('sink',8.5,0.4,0);Fn('fridge',8.6,1.8,0);Fn('tub',8.5,3.2,90,'',0.7,1.5);Fn('toilet',6.5,2.9,0);Fn('basin',7.3,2.9,0);
-  Fn('plant',5.6,3.6,0);Fn('bench',3.7,-0.6,0);Fn('column',0.9,3.4,0,'',0.3,0.3);
-  add({t:'outline',x:4.7,y:6.3,pose:'spread',rot:70,scale:0.9,label:'死者',note:'23:40 被发现，面朝书桌'});
-  add({t:'blood',x:4.75,y:6.35,kind:'pool',size:0.55,density:50,rot:0,seed:41});
-  add({t:'blood',x:5.2,y:5.4,kind:'spatter',size:0.7,density:60,rot:300,seed:17});
-  add({t:'blood',x:4.1,y:6.9,kind:'prints',size:0.5,density:50,rot:200,seed:5});
-  add({t:'mark',x:5.75,y:5.0,kind:'x',label:'',note:'台灯，灯罩碎裂'});
-  add({t:'mark',x:8.3,y:6.4,kind:'star',label:'',note:'窗闩内侧有划痕'});
-  add({t:'char',x:3.2,y:2.9,name:'K',initial:'K',note:'自称一直在客厅',dark:false});
-  add({t:'char',x:1.6,y:6.3,name:'房东',initial:'房',note:'',dark:true});
-  add({t:'path',pts:[[0.3,2.0],[0.75,2.0],[0.75,3.2],[3.9,3.2],[3.9,4.3],[4.5,5.2]],label:'推定路线',solid:false});
-  add({t:'text',x:3.75,y:-1.6,text:'临街 · 榆树街',size:2.4,rot:0,bold:false});
-  const f2=newFloor('四楼 · 阁楼');const o2=f2.objs,add2=x=>{x.id=nid();o2.push(x);return x;};
-  const attic=add2({t:'room',x:1.5,y:0,w:4.5,h:4,name:'阁楼',note:'堆放旧物，钥匙由房东保管',kind:'room'}),tr=add2({t:'room',x:6,y:0,w:1.5,h:4,name:'露台',note:'',kind:'court'});
-  add2({t:'open',kind:'door',room:attic.id,o:'v',out:1,pos:2.0,len:0.8,side:-1,hinge:1});add2({t:'open',kind:'window',room:attic.id,o:'h',out:-1,pos:3.75,len:1.0,side:1,hinge:1});
-  add2({t:'furn',kind:'coffin',x:2.3,y:2.0,rot:0,label:'木箱',w:0.6,h:1.9});add2({t:'furn',kind:'stairs',x:5.4,y:2.0,rot:0,label:'',w:0.9,h:2.6});add2({t:'mark',x:3.6,y:1.0,kind:'q',label:'',note:'脚印止于此'});
-  return Object.assign({},DEF,{tName:'榆树街 14 号 · 三楼',tSub:'《末班车之后》第七章 · 案发当夜平面示意',tAuthor:'作者名',north:20,floors:[f,f2]});
+  /* 贝克街 221B：按原著描述复原的伦敦联排屋。宽约 5.5 m，进深约 12 m。街道在下方（南）。 */
+  const mk=name=>{const f=newFloor(name),o=f.objs;f.add=x=>{x.id=nid();o.push(x);return x;};f.R=(x,y,w,h,name,note,kind)=>f.add({t:'room',x,y,w,h,name,note:note||'',kind:kind||'room'});
+    f.D=(room,oo,out,pos,kind,side,hinge,len)=>f.add({t:'open',kind:kind||'door',room:room.id,o:oo,out,pos,len:len||(kind==='double'?1.6:kind==='window'?1.2:0.9),side:side||-out,hinge:hinge||1});
+    f.F=(kind,x,y,rot,label,w,h)=>{const c=catById(kind);return f.add({t:'furn',kind,x,y,rot:rot||0,label:label||'',w:w||c.w,h:h||c.h});};return f;};
+  /* ---- 一楼：起居室 ---- */
+  const f1=mk('一楼 · 起居室');
+  const sit=f1.R(0,6,5.5,5,'起居室','两扇宽窗临贝克街；壁炉两侧各一把扶手椅'),land=f1.R(3.5,3,2,3,'楼梯平台','十七级台阶到此'),bedA=f1.R(0,0,3.5,6,'亚瑟的卧室','与起居室相通'),back=f1.R(3.5,0,2,3,'储物间','化学药品与旧案卷');
+  f1.D(sit,'h',1,1.5,'window',0,0,1.4);f1.D(sit,'h',1,4.0,'window',0,0,1.4);
+  f1.D(land,'h',1,4.5,'door',-1,-1);            // landing → sitting room
+  f1.D(bedA,'h',1,1.2,'door',-1,1);             // sitting room → Arthur's bedroom
+  f1.D(back,'v',-1,1.5,'door',1,1,0.8);         // bedroom → store
+  f1.D(bedA,'h',-1,1.75,'window',0,0,1.2);f1.D(back,'h',-1,4.4,'window',0,0,0.9);
+  f1.F('fire',0.3,8.5,90,'',1.2,0.45);f1.F('sofa1',0.9,7.4,90,'',0.8,0.8);f1.F('sofa1',0.9,9.6,90,'',0.8,0.8);
+  f1.F('desk',3.2,6.5,180,'化学台',1.4,0.6);f1.F('table',2.2,8.6,0,'',1.1,0.8);f1.F('sofa',4.6,8.0,90,'',1.7,0.8);
+  f1.F('shelf',4.9,10.3,0,'',1.1,0.3);f1.F('desk',1.6,10.5,0,'写字台',1.2,0.55);f1.F('chair',1.6,9.95,0);
+  f1.F('rug',2.6,8.6,0,'',2.6,1.6);f1.F('plant',5.1,6.4,0,'',0.4,0.4);
+  f1.F('bed1',0.7,2.4,0);f1.F('wardrobe',2.7,0.4,0,'',1.2,0.55);f1.F('basin',3.1,4.9,180);f1.F('chair',2.8,3.2,270);
+  f1.F('shelf',4.75,0.35,0,'',1.3,0.3);f1.F('table',4.3,2.2,0,'',0.9,0.6);
+  f1.F('stairs',4.5,4.4,180,'',0.9,2.4);
+  f1.add({t:'char',x:0.95,y:9.6,name:'亚瑟',initial:'A',note:'壁炉右侧的扶手椅，背对窗',dark:true});
+  f1.add({t:'char',x:2.45,y:10.15,name:'亚瑟夫人',initial:'夫',note:'写字台前整理委托信',dark:false});
+  f1.add({t:'mark',x:0.75,y:8.15,kind:'star',label:'',note:'波斯拖鞋，烟草藏在鞋尖'});
+  f1.add({t:'mark',x:0.25,y:9.9,kind:'x',label:'V.R.',note:'墙上用手枪打出的 V.R. 字样'});
+  f1.add({t:'mark',x:3.2,y:6.25,kind:'q',label:'',note:'化学台上未完成的实验'});
+  f1.add({t:'mark',x:4.2,y:10.35,kind:'ring',label:'',note:'小提琴与琴盒'});
+  f1.add({t:'path',pts:[[4.5,5.6],[4.5,6.4],[3.9,7.2],[2.3,7.6],[1.7,8.6]],label:'委托人',solid:false});
+  f1.add({t:'text',x:2.75,y:11.7,text:'贝克街 · BAKER STREET',size:2.6,rot:0,bold:false});
+  /* ---- 底层 ---- */
+  const f0=mk('底层');
+  const hall=f0.R(3.5,3,2,8,'门厅','临街大门；楼梯在尽头'),parl=f0.R(0,6,3.5,5,'房东太太的起居室','哈德森太太'),kit=f0.R(0,0,3.5,6,'厨房'),sc=f0.R(3.5,0,2,3,'食品间');
+  f0.D(hall,'h',1,4.5,'door',-1,1);f0.D(parl,'v',1,8.5,'door',-1,-1);f0.D(kit,'v',1,1.5,'door',-1,1);f0.D(sc,'h',1,4.5,'door',-1,1,0.8);
+  f0.D(parl,'h',1,1.75,'window',0,0,1.4);f0.D(kit,'h',-1,1.75,'window',0,0,1.2);f0.D(kit,'v',-1,3,'window',0,0,1.0);
+  f0.F('stairs',4.5,1.8,0,'',0.9,2.4);f0.F('fire',0.3,8.5,90,'',1.0,0.45);f0.F('sofa1',1.0,8.5,90,'',0.8,0.8);f0.F('table',1.9,9.6,0,'',1.0,0.7);
+  f0.F('counter',1.0,0.4,0,'',1.8,0.6);f0.F('stove',2.4,0.4,0);f0.F('sink',0.4,3.0,90,'',0.6,0.5);f0.F('table',1.8,3.2,0,'',1.4,0.8);f0.F('shelf',3.2,4.6,90,'',1.2,0.3);f0.F('bench',4.5,6.6,90,'',1.2,0.4);
+  f0.add({t:'char',x:1.5,y:7.4,name:'哈德森太太',initial:'哈',note:'从此处听见楼上的脚步',dark:false});
+  f0.add({t:'mark',x:4.5,y:3.3,kind:'num',label:'17',note:'十七级台阶起点'});
+  f0.add({t:'text',x:2.75,y:11.7,text:'贝克街 · BAKER STREET',size:2.6,rot:0,bold:false});
+  /* ---- 二楼 ---- */
+  const f2=mk('二楼');
+  const g=f2.R(0,6,5.5,5,'客卧','留给来访的朋友'),l2=f2.R(3.5,3,2,3,'楼梯平台'),lum=f2.R(0,0,3.5,6,'杂物间','旧箱子与报纸'),att=f2.R(3.5,0,2,3,'小间','');
+  f2.D(l2,'h',1,4.5,'door',-1,-1);f2.D(lum,'v',1,4.5,'door',-1,1,0.8);f2.D(att,'h',1,4.5,'door',-1,1,0.8);
+  f2.D(g,'h',1,1.5,'window',0,0,1.4);f2.D(g,'h',1,4.0,'window',0,0,1.4);f2.D(lum,'h',-1,1.75,'window',0,0,1.0);
+  f2.F('stairs',4.5,4.4,180,'',0.9,2.4);f2.F('bed1',0.7,8.2,0);f2.F('wardrobe',2.6,6.4,0,'',1.2,0.55);f2.F('desk',4.4,10.5,0,'',1.2,0.55);f2.F('chair',4.4,9.95,0);f2.F('fire',0.3,10.2,90,'',1.0,0.45);
+  f2.F('coffin',0.6,1.3,0,'旧箱',0.6,1.6);f2.F('coffin',1.4,1.3,0,'',0.6,1.6);f2.F('shelf',3.1,3.5,90,'',1.6,0.3);f2.F('chair',1.6,4.8,0);
+  /* ---- 劳里斯顿花园 3 号：空屋（《血字的研究》） ---- */
+  const f3=mk('劳里斯顿花园 3 号 · 空屋');
+  const fr=f3.R(0,0,5,6,'前室','无家具，墙纸大片剥落'),hl=f3.R(5,0,1.5,6,'走廊','地板灰尘上有脚印'),bk=f3.R(6.5,0,3,6,'后室','');
+  f3.D(fr,'v',1,3.0,'door',-1,1);f3.D(hl,'h',1,5.75,'door',-1,1);f3.D(bk,'v',-1,3.0,'door',1,1);
+  f3.D(fr,'h',-1,1.5,'window',0,0,1.2);f3.D(fr,'h',-1,3.5,'window',0,0,1.2);f3.D(bk,'h',1,8.0,'window',0,0,1.2);
+  f3.F('fire',0.32,3.0,90,'',1.0,0.45);
+  f3.add({t:'outline',x:2.4,y:3.3,pose:'spread',rot:110,scale:1,label:'死者',note:'仰面朝天，衣着整齐，无外伤'});
+  f3.add({t:'blood',x:3.3,y:4.2,kind:'drip',size:0.5,density:45,rot:0,seed:23});
+  f3.add({t:'blood',x:1.0,y:1.2,kind:'smear',size:0.35,density:40,rot:270,seed:9});
+  f3.add({t:'text',x:0.35,y:1.6,text:'RACHE',size:3.2,rot:-90,bold:true});
+  f3.add({t:'mark',x:0.35,y:1.6,kind:'ring',label:'',note:'墙上血书 RACHE，与视线齐高'});
+  f3.add({t:'mark',x:0.6,y:2.6,kind:'star',label:'',note:'壁炉台上的红色蜡烛，已燃尽'});
+  f3.add({t:'mark',x:2.9,y:3.9,kind:'x',label:'',note:'一枚女式金戒指'});
+  f3.add({t:'path',pts:[[5.75,6.3],[5.75,3.4],[4.6,3.0],[3.2,3.2]],label:'凶手',solid:false});
+  f3.add({t:'path',pts:[[5.75,6.3],[5.75,4.0],[6.2,3.0],[7.5,3.0]],label:'马车夫',solid:true});
+  f3.add({t:'char',x:4.3,y:1.0,name:'亚瑟',initial:'A',note:'先绕室一周，再检查地板',dark:true});
+  f3.add({t:'char',x:4.3,y:5.2,name:'警探',initial:'警',note:'',dark:false});
+  [f1,f0,f2,f3].forEach(f=>{delete f.add;delete f.R;delete f.D;delete f.F;});
+  return Object.assign({},DEF,{tName:'贝克街 221B',tSub:'小老鼠亚瑟与他夫人的住所 · 一八八一年',tAuthor:'作者名',north:0,floors:[f1,f0,f2,f3]});
 }
-
 /* ================= boot ================= */
 buildCat();
 if(!load()){P=sample();uid=Math.max(uid,1000);}
