@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="K&amp;S Grundwerk · 小老鼠营造社：小说场景户型图编辑器。网格房间、门窗、家具符号、人物与事件标记、粉笔轮廓与血迹，两种画风，PNG / SVG 导出。">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>K&amp;S Grundwerk</title>
+<style>
+:root{
+  --bg:#E7E5DF; --panel:#F3F2ED; --stage:#D9D7CF; --ink:#14151A; --mut:#62646E;
+  --rule:#14151A; --soft:#C9C7BE; --field:#FFFFFF; --shadow:#14151A;
+  --red:#E5341F; --yel:#F5B916; --blu:#2450DB; --grid:rgba(20,21,26,.09);
+  --ui:"Jost","Noto Sans SC",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:"DM Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C0D11; --panel:#14161C; --stage:#08090C; --ink:#ECE9E1; --mut:#8D909B;
+    --rule:#ECE9E1; --soft:#2A2D38; --field:#0C0D11; --shadow:#000;
+    --blu:#4B74FF; --grid:rgba(236,233,225,.07);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C0D11; --panel:#14161C; --stage:#08090C; --ink:#ECE9E1; --mut:#8D909B;
+  --rule:#ECE9E1; --soft:#2A2D38; --field:#0C0D11; --shadow:#000;
+  --blu:#4B74FF; --grid:rgba(236,233,225,.07);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:14px/1.45 var(--ui)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blu);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;padding:10px 16px;border-bottom:3px solid var(--rule);background:var(--panel)}
+.brand{display:flex;align-items:center;gap:12px}
+.mark{width:58px;height:35px;flex:none;display:block}
+.brand h1{margin:0;font-size:19px;font-weight:800;letter-spacing:.1em;line-height:1;text-transform:uppercase}
+.brand h1 span{color:var(--red)}
+.brand h1 small{display:block;margin-top:5px;font-size:11px;font-weight:500;letter-spacing:.2em;color:var(--mut)}
+.readout{display:flex;flex-wrap:wrap;gap:4px 18px;font:12px/1.3 var(--mono);color:var(--mut);font-variant-numeric:tabular-nums}
+.readout b{color:var(--ink);font-weight:500}
+.actions{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+.btn{border:2px solid var(--rule);background:var(--panel);padding:5px 12px;font-weight:700;font-size:12px;letter-spacing:.08em;box-shadow:3px 3px 0 var(--shadow);transition:transform .08s,box-shadow .08s;color:var(--ink)}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--shadow)}
+.btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--shadow)}
+.btn.red{background:var(--red);color:#fff}
+.btn.yel{background:var(--yel);color:#14151A}
+.btn.blu{background:var(--blu);color:#fff}
+.btn.flat{box-shadow:none;border-width:1.5px;font-weight:500;letter-spacing:0;padding:4px 9px}
+.btn.flat:hover{transform:none;background:var(--ink);color:var(--panel)}
+.btn.flat:active{transform:none}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:270px minmax(0,1fr) 316px}
+aside{overflow:auto;padding:0 14px 28px;background:var(--panel)}
+#left{border-right:3px solid var(--rule)}
+#right{border-left:3px solid var(--rule)}
+.sec{padding:12px 0 14px;border-bottom:1.5px solid var(--soft);display:flex;flex-direction:column;gap:9px}
+.sec:last-child{border-bottom:0}
+.sec h2{margin:0;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.22em;text-transform:uppercase}
+.sec h2 em{font-style:normal;font-weight:500;letter-spacing:.1em;color:var(--mut);font-size:11px}
+.gl{width:11px;height:11px;flex:none;display:inline-block}
+.gl.c{border-radius:50%;background:var(--red)}
+.gl.s{background:var(--blu)}
+.gl.t{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:11px solid var(--yel)}
+.gl.b{background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px)}
+.note{font-size:12px;color:var(--mut);line-height:1.5;margin:0}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:2px solid var(--rule)}
+.seg button{border:0;background:transparent;padding:6px 4px;font-size:12px;font-weight:500;border-right:1.5px solid var(--rule);line-height:1.25}
+.seg button:last-child{border-right:0}
+.seg button small{display:block;font:10px var(--mono);color:var(--mut)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.seg button[aria-pressed="true"] small{color:var(--panel);opacity:.7}
+.row{display:grid;grid-template-columns:78px minmax(0,1fr);align-items:center;gap:8px;font-size:12px}
+.row>span{color:var(--mut)}
+.row.r3{grid-template-columns:78px minmax(0,1fr) 40px}
+.row output{font:11px var(--mono);text-align:right}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pair label,.stack label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--mut)}
+.stack{display:flex;flex-direction:column;gap:8px}
+input[type=number],input[type=text],select,textarea{width:100%;background:var(--field);border:1.5px solid var(--rule);padding:4px 6px;border-radius:0;font-size:13px;color:var(--ink)}
+input[type=number]{font-family:var(--mono)}
+textarea{resize:vertical}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--ink)}
+input[type=range]::-moz-range-track{height:2px;background:var(--ink)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:15px;margin-top:-7px;background:var(--yel);border:2px solid var(--rule);border-radius:0}
+input[type=range]::-moz-range-thumb{width:8px;height:12px;background:var(--yel);border:2px solid var(--rule);border-radius:0}
+.chk{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px}
+.chk label{display:flex;gap:5px;align-items:center}
+.chk input{accent-color:var(--red)}
+.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tools button{border:1.5px solid var(--rule);background:var(--field);padding:6px 2px;font-size:12px;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tools button svg{width:26px;height:26px;display:block}
+.tools button[aria-pressed="true"]{background:var(--yel);color:#14151A}
+.tools button:hover{border-color:var(--red)}
+.cat{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.cat button{border:1.5px solid var(--soft);background:var(--field);padding:4px 2px 3px;font-size:10px;line-height:1.1;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink)}
+.cat button canvas{width:34px;height:34px;display:block}
+.cat button[aria-pressed="true"]{border-color:var(--red);background:var(--yel);color:#14151A}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chips button{border:1px solid var(--soft);background:var(--field);font-size:11px;padding:2px 7px}
+.chips button:hover{background:var(--yel);color:#14151A}
+.floors{display:flex;flex-wrap:wrap;gap:0;border:2px solid var(--rule)}
+.floors button{border:0;border-right:1.5px solid var(--rule);background:transparent;padding:5px 10px;font-size:12px}
+.floors button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.floors button.add{color:var(--mut);border-right:0}
+
+.stage{position:relative;overflow:hidden;background:var(--stage);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px}
+.deco{position:absolute;pointer-events:none}
+.deco.d1{width:300px;height:300px;border-radius:50%;background:var(--blu);right:-120px;bottom:-110px;opacity:.9}
+.deco.d2{width:180px;height:180px;background:var(--red);left:-60px;top:60px;transform:rotate(18deg)}
+.deco.d3{width:0;height:0;border-left:80px solid transparent;border-right:80px solid transparent;border-bottom:140px solid var(--yel);right:120px;top:-30px;transform:rotate(160deg)}
+.sbar{position:absolute;left:0;right:0;top:0;height:40px;display:flex;align-items:center;gap:8px;padding:0 12px;z-index:3;font:12px var(--mono);background:color-mix(in srgb,var(--stage) 84%,transparent);border-bottom:1.5px solid var(--soft)}
+.sbar .sp{flex:1}
+.sbar .hint{color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#cv{position:absolute;inset:40px 0 0 0;width:100%;height:calc(100% - 40px);display:block;touch-action:none;z-index:2;cursor:crosshair}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:50;background:var(--ink);color:var(--panel);padding:9px 16px;font-size:13px;border:2px solid var(--yel);box-shadow:4px 4px 0 var(--red);max-width:calc(100% - 32px)}
+
+@media (max-width:1100px){
+  html,body{height:auto}
+  body{min-height:100%}
+  .grid{display:flex;flex-direction:column}
+  .stage{order:-1;height:62vh;min-height:360px;border-bottom:3px solid var(--rule)}
+  aside{overflow:visible}
+  #left,#right{border:0}
+  #left{border-bottom:3px solid var(--rule)}
+  .actions{margin-left:0}
+  .sbar .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){.btn{transition:none}}
+</style>
+
+<header class="top">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 60 36" aria-hidden="true"><path d="M44 27 C54 27 57 19 51 15 S47 5 56 4" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round"/><path d="M2 27 L44 6 L44 27 Z" fill="var(--yel)"/><rect x="34" y="27" width="10" height="5" fill="var(--blu)"/><circle cx="33" cy="9" r="7.5" fill="var(--red)"/><circle cx="18" cy="22" r="1.9" fill="var(--ink)"/></svg>
+    <h1>Kirkland <span>&amp;</span> Sunshine<small>小老鼠营造社 · K&amp;S GRUNDWERK</small></h1>
+  </div>
+  <div class="readout" id="readout" aria-live="polite"></div>
+  <div class="actions">
+    <button class="btn flat" id="btnUndo" title="Ctrl+Z">撤销</button>
+    <button class="btn flat" id="btnRedo" title="Ctrl+Shift+Z">重做</button>
+    <button class="btn flat" id="btnPreview" aria-pressed="false">版面预览</button>
+    <button class="btn blu" id="btnSvg">导出 SVG</button>
+    <button class="btn yel" id="btnPng">导出 PNG</button>
+  </div>
+</header>
+
+<main class="grid">
+  <aside id="left" aria-label="工具">
+    <section class="sec">
+      <h2><i class="gl c"></i>工具 <em id="toolHint"></em></h2>
+      <div class="tools" id="tools">
+        <button data-t="select" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3l14 9-6 1.5L10 20z"/></svg>选择</button>
+        <button data-t="hand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 12V6a1.5 1.5 0 013 0v5M11 11V4.5a1.5 1.5 0 013 0V11M14 11V6a1.5 1.5 0 013 0v8.5a5 5 0 01-10 0V9a1.5 1.5 0 013 0"/></svg>平移</button>
+        <button data-t="room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="5" width="16" height="14"/><path d="M12 5v14M4 12h8"/></svg>房间</button>
+        <button data-t="door"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18h18M7 18V8M7 8a10 10 0 0110 10"/></svg>门</button>
+        <button data-t="window"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10h18M3 14h18M6 8v8M18 8v8"/></svg>窗</button>
+        <button data-t="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 6h14M12 6v13M9 19h6"/></svg>文字</button>
+        <button data-t="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>标记</button>
+        <button data-t="path"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2"><path d="M4 18c4-1 3-9 8-9s4 7 8-3"/><path d="M17 5l3 1-1 3" stroke-dasharray="0"/></svg>动线</button>
+        <button data-t="char"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-5 15-5 16 0"/></svg>人物</button>
+        <button data-t="outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.5 1.5"><circle cx="6" cy="12" r="2.5"/><path d="M8.5 11h7l4-4M15.5 13l4 4M9 10l2-5M9 14l2 5"/></svg>轮廓</button>
+        <button data-t="blood"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="13" r="4"/><circle cx="15" cy="9" r="2"/><circle cx="16" cy="15" r="1.3"/><circle cx="6" cy="6" r="1"/><circle cx="18" cy="19" r=".9"/></svg>血迹</button>
+        <button data-t="delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13M10 11v6M14 11v6"/></svg>删除</button>
+      </div>
+      <p class="note" id="toolNote">拖出矩形画房间。房间之间共用的墙自动变薄，外墙自动变厚。</p>
+    </section>
+
+    <section class="sec">
+      <h2><i class="gl t"></i>家具与结构 <em>点选后到画布上放</em></h2>
+      <div class="cat" id="cat"></div>
+      <p class="note">放好后可拖动，按 R 旋转，Delete 删除，Ctrl+D 复制。</p>
+    </section>
+
+    <section class="sec">
+      <h2><i class="gl b"></i>工程</h2>
+      <div class="chips">
+        <button id="btnSave">保存工程 .json</button>
+        <button id="btnLoad">载入工程</button>
+        <button id="btnSample">恢复示例</button>
+        <button id="btnNew">新建空白</button>
+      </div>
+      <input type="file" id="fileJson" accept=".json,application/json" hidden>
+      <p class="note">工程自动存在这台浏览器里。换电脑或长期保存，请导出 .json。</p>
+    </section>
+  </aside>
+
+  <section class="stage" id="stage" aria-label="画布">
+    <i class="deco d1"></i><i class="deco d2"></i><i class="deco d3"></i>
+    <div class="sbar">
+      <button class="btn flat" id="zOut" aria-label="缩小">−</button>
+      <span id="zVal" style="min-width:44px;text-align:center">100%</span>
+      <button class="btn flat" id="zIn" aria-label="放大">＋</button>
+      <button class="btn flat" id="zFit">适应</button>
+      <span class="sp"></span>
+      <span class="hint" id="hint">滚轮缩放 · 空格+拖动平移 · 双击房间改名</span>
+    </div>
+    <canvas id="cv"></canvas>
+  </section>
+
+  <aside id="right" aria-label="属性与版面">
+    <section class="sec">
+      <h2><i class="gl s"></i>楼层</h2>
+      <div class="floors" id="floors"></div>
+      <div class="pair">
+        <label for="flName">本层名称<input type="text" id="flName"></label>
+        <label>操作<div class="chips"><button id="flRename">改名</button><button id="flDel">删除本层</button></div></label>
+      </div>
+    </section>
+    <div id="props"></div>
+    <section class="sec">
+      <h2><i class="gl c"></i>画风</h2>
+      <div class="seg" data-seg="style"><button data-v="draft">建筑图纸<small>Grundriss</small></button><button data-v="hand">旧手稿<small>Manuskript</small></button></div>
+      <div class="chk">
+        <label for="showArea"><input type="checkbox" id="showArea" data-s="showArea"> 显示面积</label>
+        <label for="numbering"><input type="checkbox" id="numbering" data-s="numbering"> 房间编号</label>
+        <label for="showGrid"><input type="checkbox" id="showGrid" data-s="showGrid"> 编辑网格</label>
+      </div>
+    </section>
+    <section class="sec">
+      <h2><i class="gl t"></i>图签与版面</h2>
+      <div class="stack">
+        <label for="tName">图名<input type="text" id="tName" data-s="tName"></label>
+        <div class="pair"><label for="tSub">副题 / 场景<input type="text" id="tSub" data-s="tSub"></label><label for="tAuthor">作者<input type="text" id="tAuthor" data-s="tAuthor"></label></div>
+      </div>
+      <label class="row" for="sheet"><span>页面</span><select id="sheet" data-s="sheet"><option value="A5">A5 148 × 210</option><option value="B5">B5 176 × 250</option><option value="A6">A6 105 × 148</option><option value="B6">B6 125 × 176</option><option value="A5h">A5 半页 148 × 105</option><option value="B5h">B5 半页 176 × 125</option><option value="A4">A4 210 × 297</option><option value="fit">紧贴图形</option></select></label>
+      <div class="pair">
+        <label for="orient">方向<select id="orient" data-s="orient"><option value="auto">自动</option><option value="p">竖</option><option value="l">横</option></select></label>
+        <label for="margin">页边距 mm<input type="number" id="margin" data-s="margin" data-n="1" min="4" max="30" step="1"></label>
+      </div>
+      <label class="row" for="scaleMode"><span>比例</span><select id="scaleMode" data-s="scaleMode"><option value="auto">自动取整</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option><option value="150">1:150</option><option value="200">1:200</option></select></label>
+      <label class="row r3" for="north"><span>指北针</span><input type="range" id="north" data-s="north" data-n="1" min="-180" max="180" step="5"><output id="northOut"></output></label>
+      <div class="chk">
+        <label for="legend"><input type="checkbox" id="legend" data-s="legend"> 图例</label>
+        <label for="scalebar"><input type="checkbox" id="scalebar" data-s="scalebar"> 比例尺</label>
+        <label for="frame"><input type="checkbox" id="frame" data-s="frame"> 图框</label>
+      </div>
+      <label class="row" for="dpi"><span>PNG</span><select id="dpi"><option>150</option><option selected>300</option><option>600</option></select></label>
+      <p class="note">SVG 是矢量，可以直接放进 Pulpwerk 的插图页或任何排版软件。PNG 为透明底外的白底。</p>
+    </section>
+  </aside>
+</main>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const r2=v=>Math.round(v*100)/100;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS='ks-grundwerk-v1';
+const SHEETS={A5:[148,210],B5:[176,250],A6:[105,148],B6:[125,176],A5h:[148,105],B5h:[176,125],A4:[210,297]};
+const NICE=[20,25,30,40,50,60,75,100,125,150,200,250,300,400,500,750,1000];
+const CIRC='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+const circ=n=>n>=1&&n<=20?CIRC[n-1]:'('+n+')';
+const T_EXT=0.24,T_INT=0.12;
+
+/* fonts */
+['Jost:wght@400;500;700;800','DM+Mono:wght@400;500','Noto+Sans+SC:wght@400;700','LXGW+WenKai+TC:wght@400;700'].forEach(f=>{const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+f+'&display=swap';document.head.appendChild(l);});
+if(document.fonts&&document.fonts.addEventListener)document.fonts.addEventListener('loadingdone',()=>req());
+const FONT={draft:'"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif',hand:'"LXGW WenKai TC","KaiTi","STKaiti","Noto Sans SC",serif'};
+
+/* ================= hashing / noise ================= */
+function h32(a,b,c){let h=(a*374761393+b*668265263+c*2147483647)|0;h=(h^(h>>>13))*1274126177;h^=h>>>16;return (h>>>0)/4294967296;}
+function rng(seed){let s=seed>>>0||1;return()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return (s>>>0)/4294967296;};}
+
+/* ================= renderer ================= */
+/* world units: metres. widths and text sizes: paper millimetres. */
+class Base{
+  constructor(o){this.k=o.k;this.pmm=o.pmm;this.ox=o.ox;this.oy=o.oy;this.hand=!!o.hand;this.denom=o.denom;this.font=this.hand?FONT.hand:FONT.draft;}
+  X(x){return this.ox+x*this.k}Y(y){return this.oy+y*this.k}
+  wob(pts,close,amp){
+    if(!this.hand||amp===0)return pts;
+    const a=(amp==null?0.16:amp)*this.denom/1000,step=5*this.denom/1000,out=[],n=pts.length,segs=close?n:n-1;
+    for(let i=0;i<segs;i++){
+      const p=pts[i],q=pts[(i+1)%n],dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1e-9,nx=-dy/L,ny=dx/L,m=Math.max(1,Math.ceil(L/step));
+      const ph=h32(Math.round(p[0]*97),Math.round(p[1]*97),i)*6.28,ph2=h32(Math.round(q[0]*53),Math.round(q[1]*53),i+7)*6.28;
+      for(let j=0;j<=(i===segs-1&&!close?m:m-1);j++){const t=j/m,o=a*(Math.sin(t*3.1+ph)*0.7+Math.sin(t*7.3+ph2)*0.3)+(j===0||j===m?a*0.4*(h32(i,j,3)-0.5):0);out.push([p[0]+dx*t+nx*o,p[1]+dy*t+ny*o]);}
+    }
+    return out;
+  }
+  ell(cx,cy,rx,ry,rot,a0,a1){const pts=[],n=a1==null?28:Math.max(6,Math.ceil(28*Math.abs((a1-a0))/(Math.PI*2)));const s=a0==null?0:a0,e=a1==null?Math.PI*2:a1;for(let i=0;i<=n;i++){const t=s+(e-s)*i/n,x=Math.cos(t)*rx,y=Math.sin(t)*ry;pts.push([cx+x*Math.cos(rot)-y*Math.sin(rot),cy+x*Math.sin(rot)+y*Math.cos(rot)]);}if(a1==null)pts.pop();return pts;}
+  rect(x,y,w,h,o){this.poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]],Object.assign({close:true},o));}
+  line(x1,y1,x2,y2,o){this.poly([[x1,y1],[x2,y2]],o);}
+  circle(cx,cy,r,o){this.ellipse(cx,cy,r,r,0,o);}
+  ellipse(cx,cy,rx,ry,rot,o){this.poly(this.wob(this.ell(cx,cy,rx,ry,rot),true,o&&o.amp),Object.assign({close:true},o,{raw:true}));}
+  arc(cx,cy,r,a0,a1,o){this.poly(this.wob(this.ell(cx,cy,r,r,0,a0,a1),false,o&&o.amp),Object.assign({},o,{raw:true}));}
+  hatch(x,y,w,h,sp,o){ // 45° hatch, global phase so touching walls align
+    const s=sp*this.denom/1000,lines=[];const c0=Math.floor((x+y)/s)*s,c1=x+w+y+h;
+    for(let c=c0;c<=c1;c+=s){ // line x+y=c
+      let xa=Math.max(x,c-(y+h)),xb=Math.min(x+w,c-y);if(xa>=xb)continue;lines.push([[xa,c-xa],[xb,c-xb]]);
+    }
+    lines.forEach(l=>this.poly(l,Object.assign({},o,{raw:true})));
+  }
+}
+class Canv extends Base{
+  constructor(ctx,o){super(o);this.c=ctx;}
+  poly(pts,o){
+    o=o||{};const c=this.c,p=o.raw?pts:this.wob(pts,o.close,o.amp);if(p.length<2)return;
+    c.beginPath();p.forEach((q,i)=>i?c.lineTo(this.X(q[0]),this.Y(q[1])):c.moveTo(this.X(q[0]),this.Y(q[1])));if(o.close)c.closePath();
+    if(o.fill){c.fillStyle=o.fill;c.fill();}
+    if(o.stroke!==false&&(o.w||o.stroke)){c.strokeStyle=o.stroke||o.col||'#111';c.lineWidth=(o.w||0.25)*this.pmm;c.lineCap=o.cap||'round';c.lineJoin='round';c.setLineDash(o.dash?o.dash.map(d=>d*this.pmm):[]);c.stroke();c.setLineDash([]);}
+  }
+  text(x,y,s,o){
+    o=o||{};const c=this.c;c.save();c.translate(this.X(x),this.Y(y));if(o.rot)c.rotate(o.rot);
+    c.font=`${o.weight||400} ${(o.size||3)*this.pmm}px ${o.font||this.font}`;c.fillStyle=o.col||'#111';c.textAlign=o.align||'center';c.textBaseline=o.base||'middle';
+    if(o.halo){c.lineWidth=(o.size||3)*this.pmm*0.35;c.strokeStyle='#fff';c.lineJoin='round';c.strokeText(s,0,0);}
+    c.fillText(s,0,0);c.restore();
+  }
+  measure(s,o){this.c.font=`${o.weight||400} ${(o.size||3)*this.pmm}px ${o.font||this.font}`;return this.c.measureText(s).width/this.pmm;}
+}
+class Svg extends Base{
+  constructor(o){super(o);this.out=[];this.mc=document.createElement('canvas').getContext('2d');}
+  f(v){return Math.round(v*100)/100}
+  poly(pts,o){
+    o=o||{};const p=o.raw?pts:this.wob(pts,o.close,o.amp);if(p.length<2)return;
+    const d=p.map((q,i)=>(i?'L':'M')+this.f(this.X(q[0]))+' '+this.f(this.Y(q[1]))).join('')+(o.close?'Z':'');
+    const st=o.stroke!==false&&(o.w||o.stroke)?`stroke="${o.stroke||o.col||'#111'}" stroke-width="${this.f((o.w||0.25)*this.pmm)}" stroke-linecap="${o.cap||'round'}" stroke-linejoin="round"${o.dash?` stroke-dasharray="${o.dash.map(x=>this.f(x*this.pmm)).join(' ')}"`:''}`:'stroke="none"';
+    this.out.push(`<path d="${d}" fill="${o.fill||'none'}" ${st}/>`);
+  }
+  text(x,y,s,o){
+    o=o||{};const X=this.f(this.X(x)),Y=this.f(this.Y(y)),anchor={left:'start',right:'end',center:'middle'}[o.align||'center'],base={top:'hanging',middle:'central',alphabetic:'alphabetic',bottom:'text-after-edge'}[o.base||'middle'];
+    const tr=o.rot?` transform="rotate(${this.f(o.rot*180/Math.PI)} ${X} ${Y})"`:'';
+    const common=`x="${X}" y="${Y}" font-family='${(o.font||this.font).replace(/'/g,'')}' font-size="${this.f((o.size||3)*this.pmm)}" font-weight="${o.weight||400}" text-anchor="${anchor}" dominant-baseline="${base}"${tr}`;
+    if(o.halo)this.out.push(`<text ${common} fill="#fff" stroke="#fff" stroke-width="${this.f((o.size||3)*this.pmm*0.35)}" stroke-linejoin="round">${esc(s)}</text>`);
+    this.out.push(`<text ${common} fill="${o.col||'#111'}">${esc(s)}</text>`);
+  }
+  measure(s,o){this.mc.font=`${o.weight||400} ${(o.size||3)*this.pmm}px ${o.font||this.font}`;return this.mc.measureText(s).width/this.pmm;}
+}
+
+/* ================= project ================= */
+const DEF={style:'draft',showArea:true,numbering:true,showGrid:true,tName:'某公寓平面图',tSub:'',tAuthor:'',sheet:'A5',orient:'auto',margin:12,scaleMode:'auto',north:0,legend:true,scalebar:true,frame:true};
+let P=null,cur=0,sel=null,tool='select',placing=null,preview=false;
+const view={k:60,ox:0,oy:0,zoom:1};
+const F=()=>P.floors[cur];
+const newFloor=name=>({name:name||'一楼',objs:[]});
+let uid=1;const nid=()=>uid++;
+
+const ROOM_NAMES=['客厅','卧室','主卧','次卧','书房','厨房','餐厅','浴室','卫生间','玄关','走廊','储藏室','阳台','露台','庭院','车库','地下室','阁楁','工作室','琴房','客房','衣帽间','楼梯间','门厅'];
+
+/* ================= furniture catalogue ================= */
+/* draw fn gets g: local-coordinate drawer (origin centre, x right, y down), w,h, o(style opts) */
+const CAT=[
+ {id:'bed1',n:'单人床',w:0.9,h:2.0,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.rect(-w/2+0.08,-h/2+0.08,w-0.16,0.4);g.line(-w/2,-h/2+0.7,w/2,-h/2+0.7);}},
+ {id:'bed2',n:'双人床',w:1.6,h:2.0,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.rect(-w/2+0.08,-h/2+0.08,w/2-0.12,0.4);g.rect(0.04,-h/2+0.08,w/2-0.12,0.4);g.line(-w/2,-h/2+0.7,w/2,-h/2+0.7);}},
+ {id:'tableR',n:'圆桌',w:1.0,h:1.0,d:(g,w,h)=>{g.circle(0,0,w/2);}},
+ {id:'table',n:'方桌',w:1.2,h:0.8,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);}},
+ {id:'chair',n:'椅子',w:0.45,h:0.45,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.line(-w/2,-h/2+0.08,w/2,-h/2+0.08,{w:0.5});}},
+ {id:'sofa',n:'沙发',w:1.8,h:0.85,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.rect(-w/2+0.15,-h/2+0.15,w-0.3,h-0.15);g.line(-w/2+0.15,-h/2+0.15,-w/2+0.15,h/2);g.line(w/2-0.15,-h/2+0.15,w/2-0.15,h/2);}},
+ {id:'sofa1',n:'单人沙发',w:0.9,h:0.85,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.rect(-w/2+0.15,-h/2+0.15,w-0.3,h-0.15);}},
+ {id:'desk',n:'书桌',w:1.2,h:0.6,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.rect(-w/2+0.3,-h/2+0.12,0.45,0.3,{w:0.18});}},
+ {id:'wardrobe',n:'衣柜',w:1.2,h:0.6,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.line(-w/2,-h/2,w/2,h/2,{w:0.18});g.line(w/2,-h/2,-w/2,h/2,{w:0.18});}},
+ {id:'shelf',n:'书架',w:0.9,h:0.3,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);for(let x=-w/2+0.3;x<w/2-0.01;x+=0.3)g.line(x,-h/2,x,h/2,{w:0.18});}},
+ {id:'stove',n:'灶台',w:0.6,h:0.6,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);[[-0.15,-0.15],[0.15,-0.15],[-0.15,0.15],[0.15,0.15]].forEach(p=>g.circle(p[0],p[1],0.09,{w:0.18}));}},
+ {id:'sink',n:'水槽',w:0.6,h:0.5,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.rect(-w/2+0.08,-h/2+0.1,w-0.16,h-0.18,{w:0.18});g.circle(0,0.05,0.03,{w:0.18});}},
+ {id:'fridge',n:'冰箱',w:0.6,h:0.65,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.line(-w/2,-h/2,w/2,h/2,{w:0.18});}},
+ {id:'counter',n:'台面',w:1.8,h:0.6,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);}},
+ {id:'toilet',n:'马桶',w:0.4,h:0.7,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,0.2);g.ellipse(0,0.1,0.18,0.24);}},
+ {id:'tub',n:'浴缸',w:0.75,h:1.7,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.rect(-w/2+0.08,-h/2+0.08,w-0.16,h-0.16,{w:0.18});g.circle(0,-h/2+0.3,0.04,{w:0.18});}},
+ {id:'shower',n:'淋浴',w:0.9,h:0.9,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.line(-w/2,-h/2,w/2,h/2,{w:0.18});g.line(w/2,-h/2,-w/2,h/2,{w:0.18});g.circle(0,0,0.05,{w:0.18});}},
+ {id:'basin',n:'洗手盆',w:0.5,h:0.4,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.ellipse(0,0.02,0.17,0.12,{w:0.18});}},
+ {id:'piano',n:'钢琴',w:1.5,h:0.6,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.line(-w/2,h/2-0.18,w/2,h/2-0.18,{w:0.18});g.rect(-0.25,h/2,0.5,0.3,{w:0.18});}},
+ {id:'tv',n:'电视柜',w:1.2,h:0.35,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.line(-w/2+0.2,-h/2+0.06,w/2-0.2,-h/2+0.06,{w:0.6});}},
+ {id:'rug',n:'地毯',w:2.0,h:1.4,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h,{dash:[1.5,1]});}},
+ {id:'plant',n:'盆栽',w:0.5,h:0.5,d:(g,w,h)=>{g.circle(0,0,w/2);for(let i=0;i<6;i++){const a=i*Math.PI/3;g.line(0,0,Math.cos(a)*w/2,Math.sin(a)*w/2,{w:0.18});}}},
+ {id:'stairs',n:'楼梯',w:1.0,h:3.0,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);for(let y=-h/2+0.27;y<h/2-0.01;y+=0.27)g.line(-w/2,y,w/2,y,{w:0.18});g.line(0,h/2-0.15,0,-h/2+0.2,{w:0.25});g.line(0,-h/2+0.2,-0.12,-h/2+0.4,{w:0.25});g.line(0,-h/2+0.2,0.12,-h/2+0.4,{w:0.25});}},
+ {id:'lift',n:'电梯',w:1.6,h:1.6,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.line(-w/2,-h/2,w/2,h/2,{w:0.18});g.line(w/2,-h/2,-w/2,h/2,{w:0.18});}},
+ {id:'fire',n:'壁炉',w:1.2,h:0.5,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.arc(0,h/2,0.35,Math.PI,Math.PI*2);g.line(-0.35,h/2,0.35,h/2);}},
+ {id:'column',n:'柱子',w:0.4,h:0.4,d:(g,w,h,o)=>{g.rect(-w/2,-h/2,w,h,{fill:o.hand?null:'#111',w:0.35});if(o.hand)g.hatch(-w/2,-h/2,w,h);}},
+ {id:'car',n:'汽车',w:1.8,h:4.5,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.rect(-w/2+0.15,-h/2+1.1,w-0.3,1.9,{w:0.18});g.line(-w/2,-h/2+0.9,w/2,-h/2+0.9,{w:0.18});g.line(-w/2,h/2-0.9,w/2,h/2-0.9,{w:0.18});}},
+ {id:'bench',n:'长椅',w:1.5,h:0.45,d:(g,w,h)=>{g.rect(-w/2,-h/2,w,h);g.line(-w/2,-h/2+0.1,w/2,-h/2+0.1,{w:0.5});}},
+ {id:'coffin',n:'箱柜',w:0.6,h:1.9,d:(g,w,h)=>{g.poly([[-w/2+0.1,-h/2],[w/2-0.1,-h/2],[w/2,-h/2+0.5],[w/2-0.15,h/2],[-w/2+0.15,h/2],[-w/2,-h/2+0.5]],{close:true});}},
+];
+const catById=id=>CAT.find(c=>c.id===id);
+
+/* ================= geometry helpers ================= */
+function bounds(objs){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;const add=(x,y)=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);};
+  objs.forEach(o=>{if(o.t==='room'){add(o.x-0.15,o.y-0.15);add(o.x+o.w+0.15,o.y+o.h+0.15);}else if(o.t==='path')o.pts.forEach(p=>add(p[0],p[1]));else if(o.t==='text'||o.t==='mark'||o.t==='char'){add(o.x-0.5,o.y-0.5);add(o.x+0.5,o.y+0.5);}else if(o.w!=null){const r=Math.hypot(o.w,o.h)/2;add(o.x-r,o.y-r);add(o.x+r,o.y+r);}});
+  if(x0>x1)return {x0:0,y0:0,x1:4,y1:3};return {x0,y0,x1,y1};}
+const rooms=()=>F().objs.filter(o=>o.t==='room');
+function inRoom(x,y){return rooms().some(r=>x>r.x+0.001&&x<r.x+r.w-0.001&&y>r.y+0.001&&y<r.y+r.h-0.001);}
+/* edges of a room: [{o:'h'|'v', a:fixed coord, s:start, e:end, out:sign outward}] */
+function edges(r){return [{o:'h',a:r.y,s:r.x,e:r.x+r.w,out:-1,r},{o:'h',a:r.y+r.h,s:r.x,e:r.x+r.w,out:1,r},{o:'v',a:r.x,s:r.y,e:r.y+r.h,out:-1,r},{o:'v',a:r.x+r.w,s:r.y,e:r.y+r.h,out:1,r}];}
+function isExt(ed,pos){const eps=0.05;return ed.o==='h'?!inRoom(pos,ed.a+ed.out*eps):!inRoom(ed.a+ed.out*eps,pos);}
+function edgeSegs(ed){ // split by other rooms' coordinates, classify each
+  const rs=rooms(),cuts=new Set([ed.s,ed.e]);
+  rs.forEach(r=>{if(r===ed.r)return;const c=ed.o==='h'?[r.x,r.x+r.w]:[r.y,r.y+r.h];c.forEach(v=>{if(v>ed.s+1e-6&&v<ed.e-1e-6)cuts.add(v);});});
+  const cs=[...cuts].sort((a,b)=>a-b),segs=[];
+  for(let i=0;i<cs.length-1;i++){const m=(cs[i]+cs[i+1])/2;segs.push({s:cs[i],e:cs[i+1],ext:isExt(ed,m)});}
+  return segs;
+}
+function nearestEdge(x,y,tol){let best=null;rooms().forEach(r=>edges(r).forEach(ed=>{const d=ed.o==='h'?Math.abs(y-ed.a):Math.abs(x-ed.a),along=ed.o==='h'?x:y;if(d<tol&&along>=ed.s-tol&&along<=ed.e+tol&&(!best||d<best.d))best={d,ed,pos:clamp(along,ed.s,ed.e)};}));return best;}
+function wallT(ed,pos){return isExt(ed,pos)?T_EXT:T_INT;}
+function openingEdge(op){ // resolve stored edge to current room geometry
+  const r=F().objs.find(o=>o.id===op.room);if(!r)return null;
+  const e=edges(r).find(e=>e.o===op.o&&e.out===op.out);return e||null;
+}
+
+/* ================= drawing the plan ================= */
+const ZORD={room:0,blood:1,furn:2,open:3,outline:4,path:5,char:6,mark:7,text:8};
+function drawFloor(R,fl,o){
+  o=o||{};const hand=R.hand,objs=fl.objs.slice().sort((a,b)=>ZORD[a.t]-ZORD[b.t]);
+  const rs=objs.filter(x=>x.t==='room');
+  const saveRooms=rooms;
+  /* room floors */
+  rs.forEach(r=>{if(r.kind==='court')R.rect(r.x,r.y,r.w,r.h,{fill:'#fff',stroke:false});else R.rect(r.x,r.y,r.w,r.h,{fill:'#fff',stroke:false});});
+  /* walls */
+  const wallPoly=(ed,s,e,t)=>{const ext=t/2;if(ed.o==='h')return [ed.a-t/2,s-ext,e-s+2*ext,t,'h'];return [ed.a-t/2,s-ext,t,e-s+2*ext,'v'];};
+  const walls=[];
+  rs.forEach(r=>edges(r).forEach(ed=>edgeSegs(ed).forEach(sg=>{
+    const kind=r.kind||'room';
+    if(kind==='court'){walls.push({ed,sg,style:'court'});return;}
+    if(kind==='balcony'&&sg.ext){walls.push({ed,sg,style:'rail'});return;}
+    walls.push({ed,sg,style:'wall',t:sg.ext?T_EXT:T_INT});
+  })));
+  walls.filter(w=>w.style==='wall').forEach(w=>{const [x,y,ww,hh]=w.ed.o==='h'?[w.sg.s-w.t/2,w.ed.a-w.t/2,w.sg.e-w.sg.s+w.t,w.t]:[w.ed.a-w.t/2,w.sg.s-w.t/2,w.t,w.sg.e-w.sg.s+w.t];
+    if(hand){R.rect(x,y,ww,hh,{fill:'#fff',stroke:false});}else R.rect(x,y,ww,hh,{fill:'#111',stroke:false});});
+  if(hand)walls.filter(w=>w.style==='wall').forEach(w=>{const [x,y,ww,hh]=w.ed.o==='h'?[w.sg.s-w.t/2,w.ed.a-w.t/2,w.sg.e-w.sg.s+w.t,w.t]:[w.ed.a-w.t/2,w.sg.s-w.t/2,w.t,w.sg.e-w.sg.s+w.t];
+    R.hatch(x,y,ww,hh,1.1,{w:0.2});
+    if(w.ed.o==='h'){R.line(x,y,x+ww,y,{w:0.4});R.line(x,y+hh,x+ww,y+hh,{w:0.4});}else{R.line(x,y,x,y+hh,{w:0.4});R.line(x+ww,y,x+ww,y+hh,{w:0.4});}});
+  walls.filter(w=>w.style==='rail').forEach(w=>{const d=0.06;if(w.ed.o==='h'){R.line(w.sg.s,w.ed.a-d,w.sg.e,w.ed.a-d,{w:0.3});R.line(w.sg.s,w.ed.a+d,w.sg.e,w.ed.a+d,{w:0.3});for(let p=w.sg.s;p<=w.sg.e+1e-6;p+=0.5)R.line(p,w.ed.a-d,p,w.ed.a+d,{w:0.3});}else{R.line(w.ed.a-d,w.sg.s,w.ed.a-d,w.sg.e,{w:0.3});R.line(w.ed.a+d,w.sg.s,w.ed.a+d,w.sg.e,{w:0.3});for(let p=w.sg.s;p<=w.sg.e+1e-6;p+=0.5)R.line(w.ed.a-d,p,w.ed.a+d,p,{w:0.3});}});
+  walls.filter(w=>w.style==='court').forEach(w=>{if(w.ed.o==='h')R.line(w.sg.s,w.ed.a,w.sg.e,w.ed.a,{w:0.3,dash:[2,1.2]});else R.line(w.ed.a,w.sg.s,w.ed.a,w.sg.e,{w:0.3,dash:[2,1.2]});});
+  /* openings */
+  objs.filter(x=>x.t==='open').forEach(op=>{const ed=openingEdge(op);if(!ed)return;drawOpening(R,op,ed);});
+  /* room labels */
+  rs.forEach((r,i)=>{
+    const cx=r.x+r.w/2,cy=r.y+r.h/2,sz=Math.min(2.7,Math.max(1.8,r.w*1000/R.denom/(r.name.length+1)*0.9)),area=r.w*r.h;
+    const numOn=P.numbering&&r.kind!=='court';
+    if(numOn){const n=rs.indexOf(r)+1,rr=1.9*R.denom/1000;R.circle(r.x+rr+0.12,r.y+rr+0.12,rr,{w:0.25,fill:'#fff'});R.text(r.x+rr+0.12,r.y+rr+0.12,String(n),{size:2.4,weight:700});}
+    R.text(cx,cy-(P.showArea?0.9:0)*R.denom/1000,r.name,{size:sz,weight:hand?400:700,halo:true});
+    if(P.showArea)R.text(cx,cy+1.6*R.denom/1000,area.toFixed(1)+' m²',{size:1.9,col:'#444',halo:true});
+  });
+  objs.forEach(ob=>{
+    if(ob.t==='furn')drawFurn(R,ob);
+    else if(ob.t==='blood')drawBlood(R,ob);
+    else if(ob.t==='outline')drawOutline(R,ob);
+    else if(ob.t==='path')drawPath(R,ob);
+    else if(ob.t==='char')drawChar(R,ob);
+    else if(ob.t==='mark')drawMark(R,ob);
+    else if(ob.t==='text')R.text(ob.x,ob.y,ob.text,{size:ob.size||3,rot:ob.rot*Math.PI/180,halo:true,weight:ob.bold?700:400});
+  });
+}
+function drawOpening(R,op,ed){
+  const t=wallT(ed,op.pos),L=op.len,h=ed.o==='h',a=ed.a,s=op.pos-L/2,e=op.pos+L/2;
+  const gap=t+0.02;
+  if(h)R.rect(s,a-gap/2,L,gap,{fill:'#fff',stroke:false});else R.rect(a-gap/2,s,gap,L,{fill:'#fff',stroke:false});
+  const lw=0.35;
+  if(op.kind==='window'){
+    const d=t/4;if(h){R.line(s,a-d,e,a-d,{w:0.25});R.line(s,a+d,e,a+d,{w:0.25});R.line(s,a-t/2,s,a+t/2,{w:lw});R.line(e,a-t/2,e,a+t/2,{w:lw});}
+    else{R.line(a-d,s,a-d,e,{w:0.25});R.line(a+d,s,a+d,e,{w:0.25});R.line(a-t/2,s,a+t/2,s,{w:lw});R.line(a-t/2,e,a+t/2,e,{w:lw});}
+    return;
+  }
+  if(op.kind==='arch'){if(h){R.line(s,a-t/2,s,a+t/2,{w:lw});R.line(e,a-t/2,e,a+t/2,{w:lw});}else{R.line(a-t/2,s,a+t/2,s,{w:lw});R.line(a-t/2,e,a+t/2,e,{w:lw});}return;}
+  const side=op.side||1,hinge=op.hinge||1; // side: which direction the leaf opens (+/- perpendicular); hinge: 1 = at s, -1 = at e
+  if(h){R.line(s,a-t/2,s,a+t/2,{w:lw});R.line(e,a-t/2,e,a+t/2,{w:lw});}else{R.line(a-t/2,s,a+t/2,s,{w:lw});R.line(a-t/2,e,a+t/2,e,{w:lw});}
+  const leaves=op.kind==='double'?2:1,ll=L/leaves;
+  if(op.kind==='sliding'){if(h){R.line(s,a-side*t/4,s+L*0.55,a-side*t/4,{w:0.3});R.line(s+L*0.45,a+side*t/4,e,a+side*t/4,{w:0.3});}else{R.line(a-side*t/4,s,a-side*t/4,s+L*0.55,{w:0.3});R.line(a+side*t/4,s+L*0.45,a+side*t/4,e,{w:0.3});}return;}
+  for(let i=0;i<leaves;i++){
+    const hs=(hinge>0)!==(i===1)?1:-1; // leaf i hinge sign
+    const px=leaves===2?(i===0?s:e):(hinge>0?s:e),dir=leaves===2?(i===0?1:-1):(hinge>0?1:-1);
+    if(h){const hx=px,hy=a;R.line(hx,hy,hx,hy+side*ll,{w:0.3});const a0=side>0?(dir>0?0:Math.PI):(dir>0?Math.PI*2:Math.PI),a1=Math.PI/2*side;
+      R.arc(hx,hy,ll,dir>0?(side>0?0:-Math.PI/2):(side>0?Math.PI/2:Math.PI),dir>0?(side>0?Math.PI/2:0):(side>0?Math.PI:Math.PI/2),{w:0.2});}
+    else{const hx=a,hy=px;R.line(hx,hy,hx+side*ll,hy,{w:0.3});
+      R.arc(hx,hy,ll,dir>0?(side>0?0:Math.PI/2):(side>0?-Math.PI/2:Math.PI),dir>0?(side>0?Math.PI/2:Math.PI):(side>0?0:Math.PI*3/2),{w:0.2});}
+  }
+}
+function local(R,ob){ // local drawer with rotation about centre
+  const a=(ob.rot||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a),T=(x,y)=>[ob.x+x*c-y*s,ob.y+x*s+y*c];
+  const g={
+    line:(x1,y1,x2,y2,o)=>R.poly([T(x1,y1),T(x2,y2)],Object.assign({w:0.3},o)),
+    rect:(x,y,w,h,o)=>R.poly([T(x,y),T(x+w,y),T(x+w,y+h),T(x,y+h)],Object.assign({close:true,w:0.3},o)),
+    poly:(pts,o)=>R.poly(pts.map(p=>T(p[0],p[1])),Object.assign({w:0.3},o)),
+    circle:(x,y,r,o)=>{const p=T(x,y);R.ellipse(p[0],p[1],r,r,0,Object.assign({w:0.3},o));},
+    ellipse:(x,y,rx,ry,o)=>{const p=T(x,y);R.ellipse(p[0],p[1],rx,ry,a,Object.assign({w:0.3},o));},
+    arc:(x,y,r,a0,a1,o)=>{const p=T(x,y);R.arc(p[0],p[1],r,a0+a,a1+a,Object.assign({w:0.3},o));},
+    hatch:(x,y,w,h)=>{if(!ob.rot)R.hatch(ob.x+x,ob.y+y,w,h,1.1,{w:0.2});},
+    T};
+  return g;
+}
+function drawFurn(R,ob){const c=catById(ob.kind);if(!c)return;const g=local(R,ob);c.d(g,ob.w,ob.h,{hand:R.hand});if(ob.label)R.text(ob.x,ob.y,ob.label,{size:2,halo:true});}
+function drawMark(R,ob){
+  const s=0.22*R.denom/100,x=ob.x,y=ob.y,k=ob.kind||'x';
+  if(k==='x'){R.line(x-s,y-s,x+s,y+s,{w:0.5});R.line(x+s,y-s,x-s,y+s,{w:0.5});}
+  else if(k==='star'){const p=[];for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?s*0.45:s*1.1;p.push([x+Math.cos(a)*r,y+Math.sin(a)*r]);}R.poly(p,{close:true,fill:'#111',w:0.2});}
+  else if(k==='dot')R.circle(x,y,s*0.6,{fill:'#111',w:0.2});
+  else if(k==='ring')R.circle(x,y,s*0.8,{w:0.5});
+  else if(k==='q')R.text(x,y,'?',{size:4.5,weight:700});
+  else if(k==='tri')R.poly([[x,y-s],[x+s,y+s*0.8],[x-s,y+s*0.8]],{close:true,fill:'#111',w:0.2});
+  else if(k==='num')R.text(x,y,ob.label?ob.label.slice(0,3):'1',{size:3.2,weight:700});
+  if(ob.label&&k!=='num')R.text(x+s*1.4,y,ob.label,{size:2.4,align:'left',halo:true});
+}
+function drawPath(R,ob){
+  const p=ob.pts;if(p.length<2)return;R.poly(p,{w:0.35,dash:ob.solid?null:[1.6,1.2]});
+  const a=p[p.length-1],b=p[p.length-2],ang=Math.atan2(a[1]-b[1],a[0]-b[0]),L=0.3*R.denom/100;
+  R.poly([[a[0]-Math.cos(ang-0.5)*L,a[1]-Math.sin(ang-0.5)*L],a,[a[0]-Math.cos(ang+0.5)*L,a[1]-Math.sin(ang+0.5)*L]],{w:0.35});
+  if(ob.label){const m=p[Math.floor(p.length/2)];R.text(m[0],m[1]-0.25,ob.label,{size:2.3,halo:true});}
+}
+function drawChar(R,ob){
+  const r=0.3*R.denom/100;R.circle(ob.x,ob.y,r,{fill:ob.dark?'#111':'#fff',w:0.4});
+  R.text(ob.x,ob.y,(ob.initial||ob.name||'A').slice(0,2),{size:2.6,weight:700,col:ob.dark?'#fff':'#111'});
+  if(ob.name)R.text(ob.x+r*1.3,ob.y,ob.name,{size:2.4,align:'left',halo:true});
+}
+const POSES={
+ spread:[[[0,-0.78],[0.12,-0.62],[0.42,-0.5],[0.62,-0.62]],[[0,-0.78],[-0.12,-0.62],[-0.42,-0.5],[-0.62,-0.62]],[[0.12,-0.62],[0.16,-0.1],[0.1,0.05],[0.2,0.5],[0.26,0.86]],[[-0.12,-0.62],[-0.16,-0.1],[-0.1,0.05],[-0.32,0.48],[-0.36,0.86]]],
+ side:[[[0,-0.78],[0.14,-0.6],[0.36,-0.3],[0.2,-0.05]],[[0,-0.78],[-0.1,-0.6],[-0.12,-0.2],[0.08,-0.1]],[[0.14,-0.6],[0.12,-0.1],[0.34,0.35],[0.24,0.82]],[[-0.1,-0.6],[-0.06,-0.1],[-0.1,0.4],[0.1,0.82]]],
+ curl:[[[0,-0.78],[0.15,-0.62],[0.3,-0.4],[0.1,-0.25]],[[0,-0.78],[-0.08,-0.6],[0.05,-0.3],[0.18,-0.22]],[[0.15,-0.62],[0.05,-0.1],[0.45,0.1],[0.5,0.55]],[[-0.08,-0.6],[-0.15,-0.1],[0.25,0.15],[0.3,0.62]]]
+};
+function drawOutline(R,ob){
+  const g=local(R,ob),S=ob.scale||1,o={w:0.45,dash:[1.4,1.1],amp:0.35},pose=POSES[ob.pose]||POSES.spread;
+  const hx=0,hy=-0.78;g.circle(hx*S,hy*S,0.14*S,o);
+  pose.forEach(seg=>g.poly(seg.map(p=>[p[0]*S,p[1]*S]),o));
+  if(ob.label)R.text(ob.x,ob.y+0.95*S,ob.label,{size:2.3,halo:true});
+}
+function drawBlood(R,ob){
+  const rand=rng(ob.seed||7),k=ob.kind||'spatter',sz=ob.size||0.6,n=Math.round(20+(ob.density||50)*1.2),dir=(ob.rot||0)*Math.PI/180,fill=ob.fill||'#111';
+  const blob=(cx,cy,r,irr)=>{const p=[];const m=10;for(let i=0;i<m;i++){const a=i/m*Math.PI*2,rr=r*(1+(rand()-0.5)*irr);p.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]);}R.poly(p,{close:true,fill,stroke:false,raw:true});};
+  if(k==='pool'){blob(ob.x,ob.y,sz*0.55,0.5);for(let i=0;i<Math.round(n/4);i++){const a=rand()*Math.PI*2,d=sz*(0.5+rand()*0.35);blob(ob.x+Math.cos(a)*d,ob.y+Math.sin(a)*d,sz*0.04*(1+rand()*2),0.6);}}
+  else if(k==='drip'){for(let i=0;i<n;i++){const a=rand()*Math.PI*2,d=Math.sqrt(rand())*sz;blob(ob.x+Math.cos(a)*d,ob.y+Math.sin(a)*d,sz*0.03*(0.4+rand()*1.6),0.5);}}
+  else if(k==='spatter'){for(let i=0;i<n;i++){const spread=(rand()-0.5)*1.1,d=Math.pow(rand(),0.6)*sz*1.8,a=dir+spread,cx=ob.x+Math.cos(a)*d,cy=ob.y+Math.sin(a)*d,r=sz*0.035*(0.3+rand()*1.4)*(1-d/(sz*2.2)),len=r*(1+d/sz*2.2);
+      R.ellipse(cx+Math.cos(a)*len*0.5,cy+Math.sin(a)*len*0.5,len,r,a,{fill,stroke:false,amp:0});if(rand()<0.3)R.ellipse(cx+Math.cos(a)*len*1.4,cy+Math.sin(a)*len*1.4,r*0.4,r*0.4,0,{fill,stroke:false,amp:0});}
+    blob(ob.x,ob.y,sz*0.12,0.7);}
+  else if(k==='smear'){const L=sz*2.2;for(let i=0;i<Math.round(n*0.8);i++){const t=rand(),w=sz*0.28*(1-t*0.6),off=(rand()-0.5)*w*2,cx=ob.x+Math.cos(dir)*L*t-Math.sin(dir)*off,cy=ob.y+Math.sin(dir)*L*t+Math.cos(dir)*off,len=sz*(0.08+rand()*0.25);
+      R.poly([[cx,cy],[cx+Math.cos(dir)*len,cy+Math.sin(dir)*len]],{w:0.3+rand()*0.5*(1-t),col:fill,raw:true,cap:'round'});}}
+  else if(k==='prints'){for(let i=0;i<Math.round(n/6);i++){const t=i/Math.max(1,Math.round(n/6)-1),side=i%2?1:-1,cx=ob.x+Math.cos(dir)*sz*2.5*t-Math.sin(dir)*side*0.12,cy=ob.y+Math.sin(dir)*sz*2.5*t+Math.cos(dir)*side*0.12;R.ellipse(cx,cy,0.13,0.05,dir,{fill,stroke:false,amp:0});R.ellipse(cx+Math.cos(dir)*0.16,cy+Math.sin(dir)*0.16,0.05,0.05,0,{fill,stroke:false,amp:0});}}
+}
+
+/* ================= sheet composition ================= */
+function sheetSpec(fl){
+  const b=bounds(fl.objs),bw=b.x1-b.x0+0.6,bh=b.y1-b.y0+0.6,m=P.margin;
+  let W,H;
+  if(P.sheet==='fit'){W=0;H=0;}else{[W,H]=SHEETS[P.sheet];const o=P.orient==='auto'?(bw/bh>1.15?'l':'p'):P.orient;if((o==='l')!==(W>H))[W,H]=[H,W];}
+  const legendN=P.legend?legendItems(fl).length:0,cols0=(W>=140&&legendN>6)?2:1,legendH=legendN?Math.ceil(legendN/cols0)*4.2+6:0;
+  const titleH=P.tName||P.tSub?13:0,footH=(P.scalebar?9:0)+legendH;
+  let denom;
+  if(W){const aw=W-2*m,ah=H-2*m-titleH-footH,ex=Math.max(bw/aw,bh/ah)*1000;denom=P.scaleMode==='auto'?NICE.find(n=>n>=ex)||1000:+P.scaleMode;}
+  else{denom=P.scaleMode==='auto'?100:+P.scaleMode;W=bw*1000/denom+2*m;H=bh*1000/denom+2*m+titleH+footH;}
+  const mmPerM=1000/denom,dw=bw*mmPerM,dh=bh*mmPerM,aw=W-2*m,ah=H-2*m-titleH-footH;
+  return {W,H,m,denom,mmPerM,b,titleH,footH,legendH,dx:m+(aw-dw)/2-(b.x0-0.3)*mmPerM,dy:m+titleH+(ah-dh)/2-(b.y0-0.3)*mmPerM,overflow:dw>aw+0.5||dh>ah+0.5};
+}
+function legendItems(fl){
+  const it=[];const rs=fl.objs.filter(o=>o.t==='room');
+  if(P.numbering)rs.forEach((r,i)=>{if(r.kind!=='court'||r.note)it.push(circ(i+1)+' '+r.name+(r.note?' — '+r.note:''));});
+  fl.objs.filter(o=>o.t==='char'&&(o.note||o.name)).forEach(o=>{const ini=(o.initial||o.name.slice(0,1)).slice(0,2);it.push((ini===o.name?ini:ini+' '+o.name)+(o.note?' — '+o.note:''));});
+  fl.objs.filter(o=>o.t==='mark'&&o.note).forEach(o=>it.push({x:'✕',star:'★',dot:'●',ring:'○',q:'?',tri:'▲',num:o.label||'1'}[o.kind||'x']+' '+(o.label&&o.kind!=='num'?o.label+' — ':'')+o.note));
+  fl.objs.filter(o=>o.t==='outline'&&o.note).forEach(o=>it.push('⌇ '+(o.label?o.label+' — ':'')+o.note));
+  return it;
+}
+function composeSheet(make,fl,pxPerMm){
+  const sp=sheetSpec(fl),R=make({k:pxPerMm*sp.mmPerM,pmm:pxPerMm,ox:sp.dx*pxPerMm,oy:sp.dy*pxPerMm,hand:P.style==='hand',denom:sp.denom});
+  const mm=(x,y)=>[x/sp.mmPerM-sp.dx/sp.mmPerM,y/sp.mmPerM-sp.dy/sp.mmPerM]; // paper mm -> world
+  const M=sp.m,W=sp.W,H=sp.H;
+  R.rect(...mm(0,0),W/sp.mmPerM,H/sp.mmPerM,{fill:'#fff',stroke:false});
+  if(P.frame){const a=mm(M-4,M-4);R.rect(a[0],a[1],(W-2*M+8)/sp.mmPerM,(H-2*M+8)/sp.mmPerM,{w:0.5});}
+  if(sp.titleH){const a=mm(M,M+3);R.text(a[0],a[1],P.tName||'',{size:4.6,weight:700,align:'left',base:'middle'});
+    if(P.tSub){const b=mm(M,M+9);R.text(b[0],b[1],P.tSub,{size:2.6,align:'left',col:'#444'});}
+    const c=mm(W-M,M+3);R.text(c[0],c[1],fl.name+(P.floors.length>1?'':'')+' · 1:'+sp.denom,{size:2.8,align:'right',weight:500});
+    if(P.tAuthor){const d=mm(W-M,M+9);R.text(d[0],d[1],P.tAuthor,{size:2.6,align:'right',col:'#444'});}
+    const l=mm(M,M+12);R.line(l[0],l[1],l[0]+(W-2*M)/sp.mmPerM,l[1],{w:0.4});}
+  drawFloor(R,fl,{});
+  let y=H-M-(P.scalebar?8:0);
+  if(sp.legendH){const items=legendItems(fl),cols=(W>=140&&items.length>6)?2:1,rows=Math.ceil(items.length/cols),colW=(W-2*M)/cols;y-=sp.legendH;const l=mm(M,y+1);R.line(l[0],l[1],l[0]+(W-2*M)/sp.mmPerM,l[1],{w:0.3});
+    items.forEach((s,i)=>{const c=Math.floor(i/rows),r=i%rows,p=mm(M+c*colW,y+5+r*4.2);R.text(p[0],p[1],s,{size:2.5,align:'left'});});}
+  if(P.scalebar){const y0=H-M-4,x0=M,segs=[0,1,2,3,4,5],u=sp.mmPerM;const a=mm(x0,y0);
+    for(let i=0;i<5;i++){const p=mm(x0+i*u,y0-1.2);R.rect(p[0],p[1],1,1.2/sp.mmPerM,{fill:i%2?'#fff':'#111',w:0.25});}
+    segs.forEach(i=>{const p=mm(x0+i*u,y0+1);R.text(p[0],p[1]+1.6/sp.mmPerM,i+(i===5?' m':''),{size:2,base:'top'});});
+    const s=mm(x0+5*u+6,y0-0.6);R.text(s[0],s[1],'1:'+sp.denom,{size:2.4,align:'left'});
+    /* north arrow */
+    const c=mm(W-M-5,y0-3),r=3.5/sp.mmPerM,a0=(P.north||0)*Math.PI/180-Math.PI/2;
+    R.circle(c[0],c[1],r,{w:0.3});
+    R.poly([[c[0]+Math.cos(a0)*r,c[1]+Math.sin(a0)*r],[c[0]+Math.cos(a0+2.6)*r*0.45,c[1]+Math.sin(a0+2.6)*r*0.45],[c[0]+Math.cos(a0-2.6)*r*0.45,c[1]+Math.sin(a0-2.6)*r*0.45]],{close:true,fill:'#111',w:0.2});
+    R.text(c[0]+Math.cos(a0)*r*1.7,c[1]+Math.sin(a0)*r*1.7,'N',{size:2.4,weight:700});}
+  return {R,sp};
+}
+
+/* ================= editor canvas ================= */
+const cv=$('cv'),cx=cv.getContext('2d');let raf=0;
+function req(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint();});}
+let curDenom=100;
+function paint(){
+  const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+  cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,w,h);
+  const fl=F();
+  if(preview){
+    const sp=sheetSpec(fl),pxPerMm=Math.min((w-40)/sp.W,(h-40)/sp.H)*view.zoom,ox=(w-sp.W*pxPerMm)/2,oy=(h-sp.H*pxPerMm)/2;
+    cx.save();cx.translate(ox,oy);cx.shadowColor='rgba(0,0,0,.35)';cx.shadowBlur=18;cx.fillStyle='#fff';cx.fillRect(0,0,sp.W*pxPerMm,sp.H*pxPerMm);cx.shadowBlur=0;
+    composeSheet(o=>new Canv(cx,o),fl,pxPerMm);
+    if(sp.overflow){cx.fillStyle='#E5341F';cx.font='bold 13px Jost,sans-serif';cx.fillText('图形超出页面，请改用自动比例或更大的页面',10,sp.H*pxPerMm-8);}
+    cx.restore();readout(sp);return;
+  }
+  const sp=sheetSpec(fl);curDenom=sp.denom;
+  const R=new Canv(cx,{k:view.k,pmm:view.k*curDenom/1000,ox:view.ox,oy:view.oy,hand:P.style==='hand',denom:curDenom});
+  /* grid */
+  if(P.showGrid){cx.strokeStyle='rgba(20,21,26,.13)';cx.lineWidth=1;const g=view.k<25?1:0.5,x0=Math.floor(-view.ox/view.k/g)*g,y0=Math.floor(-view.oy/view.k/g)*g;
+    cx.beginPath();for(let x=x0;x*view.k+view.ox<w;x+=g){const X=Math.round(view.ox+x*view.k)+0.5;cx.moveTo(X,0);cx.lineTo(X,h);}for(let y=y0;y*view.k+view.oy<h;y+=g){const Y=Math.round(view.oy+y*view.k)+0.5;cx.moveTo(0,Y);cx.lineTo(w,Y);}cx.stroke();}
+  /* white ground under rooms so hatch/labels read on the stage */
+  drawFloor(R,fl,{});
+  /* ghost while creating */
+  if(drag&&drag.mode==='room'){const r=normRect(drag);cx.strokeStyle='#2450DB';cx.setLineDash([6,4]);cx.lineWidth=2;cx.strokeRect(view.ox+r.x*view.k,view.oy+r.y*view.k,r.w*view.k,r.h*view.k);cx.setLineDash([]);cx.fillStyle='#2450DB';cx.font='12px "DM Mono",monospace';cx.fillText(r.w.toFixed(2)+' × '+r.h.toFixed(2)+' m',view.ox+r.x*view.k+4,view.oy+r.y*view.k-6);}
+  if(pathDraft){cx.strokeStyle='#2450DB';cx.setLineDash([6,4]);cx.lineWidth=1.5;cx.beginPath();pathDraft.forEach((p,i)=>i?cx.lineTo(view.ox+p[0]*view.k,view.oy+p[1]*view.k):cx.moveTo(view.ox+p[0]*view.k,view.oy+p[1]*view.k));if(hover)cx.lineTo(view.ox+hover[0]*view.k,view.oy+hover[1]*view.k);cx.stroke();cx.setLineDash([]);}
+  if(placing&&hover&&!drag){cx.globalAlpha=0.5;const ob=Object.assign({},placing,{x:hover[0],y:hover[1]});if(ob.t==='furn')drawFurn(R,ob);else if(ob.t==='outline')drawOutline(R,ob);else if(ob.t==='blood')drawBlood(R,ob);else if(ob.t==='char')drawChar(R,ob);else if(ob.t==='mark')drawMark(R,ob);cx.globalAlpha=1;}
+  if((tool==='door'||tool==='window')&&hover){const ne=nearestEdge(hover[0],hover[1],0.4);if(ne){cx.fillStyle='#E5341F';const [x,y]=ne.ed.o==='h'?[ne.pos,ne.ed.a]:[ne.ed.a,ne.pos];cx.beginPath();cx.arc(view.ox+x*view.k,view.oy+y*view.k,5,0,7);cx.fill();}}
+  /* selection */
+  const s=selObj();if(s){cx.strokeStyle='#2450DB';cx.lineWidth=1.5;cx.setLineDash([5,3]);const bb=objBox(s);
+    if(s.t==='room'){cx.strokeRect(view.ox+s.x*view.k,view.oy+s.y*view.k,s.w*view.k,s.h*view.k);cx.setLineDash([]);cx.fillStyle='#F5B916';cx.strokeStyle='#14151A';[[s.x,s.y],[s.x+s.w,s.y],[s.x+s.w,s.y+s.h],[s.x,s.y+s.h]].forEach(p=>{cx.fillRect(view.ox+p[0]*view.k-5,view.oy+p[1]*view.k-5,10,10);cx.strokeRect(view.ox+p[0]*view.k-5,view.oy+p[1]*view.k-5,10,10);});}
+    else if(s.t==='path'){s.pts.forEach(p=>{cx.fillStyle='#F5B916';cx.fillRect(view.ox+p[0]*view.k-4,view.oy+p[1]*view.k-4,8,8);cx.strokeRect(view.ox+p[0]*view.k-4,view.oy+p[1]*view.k-4,8,8);});cx.setLineDash([]);}
+    else{cx.strokeRect(view.ox+bb.x0*view.k-4,view.oy+bb.y0*view.k-4,(bb.x1-bb.x0)*view.k+8,(bb.y1-bb.y0)*view.k+8);cx.setLineDash([]);}}
+  readout(sp);
+}
+function readout(sp){const fl=F(),rs=fl.objs.filter(o=>o.t==='room'),area=rs.reduce((a,r)=>a+r.w*r.h,0);
+  $('readout').innerHTML=`<span>页面 <b>${sp.W.toFixed(0)} × ${sp.H.toFixed(0)} mm</b></span><span>比例 <b>1:${sp.denom}</b>${sp.overflow?' <b style="color:var(--red)">超出</b>':''}</span><span>房间 <b>${rs.length}</b> · <b>${area.toFixed(1)} m²</b></span><span>楼层 <b>${fl.name}</b></span>`;}
+
+/* ================= view ================= */
+function fit(){const b=bounds(F().objs),w=cv.clientWidth,h=cv.clientHeight,bw=b.x1-b.x0+1,bh=b.y1-b.y0+1;view.k=clamp(Math.min(w/bw,h/bh),8,400);view.zoom=1;view.ox=(w-(b.x0+b.x1)*view.k)/2;view.oy=(h-(b.y0+b.y1)*view.k)/2;$('zVal').textContent='100%';req();}
+function zoomAt(f,px,py){if(preview){view.zoom=clamp(view.zoom*f,0.5,4);req();return;}const nk=clamp(view.k*f,6,600),r=nk/view.k;view.ox=px-(px-view.ox)*r;view.oy=py-(py-view.oy)*r;view.k=nk;$('zVal').textContent=Math.round(view.k/60*100)+'%';req();}
+$('zIn').onclick=()=>zoomAt(1.25,cv.clientWidth/2,cv.clientHeight/2);$('zOut').onclick=()=>zoomAt(0.8,cv.clientWidth/2,cv.clientHeight/2);$('zFit').onclick=()=>{view.zoom=1;fit();};
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(e.deltaY<0?1.12:0.89,e.clientX-r.left,e.clientY-r.top);},{passive:false});
+if(window.ResizeObserver)new ResizeObserver(()=>req()).observe(cv);
+
+/* ================= hit testing ================= */
+function objBox(o){
+  if(o.t==='room')return {x0:o.x,y0:o.y,x1:o.x+o.w,y1:o.y+o.h};
+  if(o.t==='path'){const b=bounds([o]);return b;}
+  if(o.t==='text'){const w=(o.text||'').length*(o.size||3)*curDenom/1000*0.9;return {x0:o.x-w/2,y0:o.y-0.2,x1:o.x+w/2,y1:o.y+0.2};}
+  if(o.t==='mark'||o.t==='char'){const r=0.35*curDenom/100;return {x0:o.x-r,y0:o.y-r,x1:o.x+r+(o.label||o.name?1.2:0),y1:o.y+r};}
+  if(o.t==='open'){const ed=openingEdge(o);if(!ed)return {x0:o.x||0,y0:o.y||0,x1:o.x||0,y1:o.y||0};const [x,y]=ed.o==='h'?[o.pos,ed.a]:[ed.a,o.pos];return ed.o==='h'?{x0:x-o.len/2,y0:y-0.2,x1:x+o.len/2,y1:y+0.2}:{x0:x-0.2,y0:y-o.len/2,x1:x+0.2,y1:y+o.len/2};}
+  if(o.t==='blood'){const r=(o.size||0.6)*(o.kind==='smear'||o.kind==='prints'?2.4:o.kind==='spatter'?1.9:1.1);return {x0:o.x-r,y0:o.y-r,x1:o.x+r,y1:o.y+r};}
+  if(o.t==='outline'){const s=(o.scale||1);return {x0:o.x-0.7*s,y0:o.y-0.95*s,x1:o.x+0.7*s,y1:o.y+0.95*s};}
+  const a=(o.rot||0)*Math.PI/180,c=Math.abs(Math.cos(a)),s=Math.abs(Math.sin(a)),hw=(o.w*c+o.h*s)/2,hh=(o.w*s+o.h*c)/2;return {x0:o.x-hw,y0:o.y-hh,x1:o.x+hw,y1:o.y+hh};
+}
+function hit(x,y){
+  const objs=F().objs.slice().sort((a,b)=>ZORD[b.t]-ZORD[a.t]),tol=6/view.k;
+  for(const o of objs){
+    if(o.t==='room')continue;
+    if(o.t==='path'){for(let i=0;i<o.pts.length-1;i++)if(distSeg(x,y,o.pts[i],o.pts[i+1])<tol)return o;continue;}
+    const b=objBox(o);if(x>=b.x0-tol&&x<=b.x1+tol&&y>=b.y0-tol&&y<=b.y1+tol)return o;
+  }
+  const rs=objs.filter(o=>o.t==='room').sort((a,b)=>a.w*a.h-b.w*b.h);
+  for(const r of rs)if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)return r;
+  return null;
+}
+function distSeg(px,py,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy||1e-9,t=clamp(((px-a[0])*dx+(py-a[1])*dy)/L,0,1);return Math.hypot(px-a[0]-dx*t,py-a[1]-dy*t);}
+const selObj=()=>F().objs.find(o=>o.id===sel)||null;
+
+/* ================= interaction ================= */
+let drag=null,hover=null,pathDraft=null,space=false;
+const snap=(v,g)=>Math.round(v/(g||0.25))*(g||0.25);
+function toW(e){const r=cv.getBoundingClientRect();return [(e.clientX-r.left-view.ox)/view.k,(e.clientY-r.top-view.oy)/view.k];}
+function normRect(d){const x=Math.min(d.x0,d.x1),y=Math.min(d.y0,d.y1);return {x,y,w:Math.abs(d.x1-d.x0),h:Math.abs(d.y1-d.y0)};}
+function setTool(t){tool=t;placing=null;pathDraft=null;[...$('tools').children].forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)));[...$('cat').children].forEach(b=>b.setAttribute('aria-pressed','false'));
+  const notes={select:'点选、拖动。房间角点可拉伸。按住空格拖动可平移。',hand:'拖动画布平移。',room:'拖出矩形画房间。房间之间共用的墙自动变薄，外墙自动变厚。',door:'点墙放门。选中后可翻转开向和铰链侧。',window:'点墙放窗。',text:'点画布放文字。',mark:'点画布放标记：✕ ★ ● 等，可加说明。',path:'逐点点击画动线，双击或回车结束，Esc 取消。',char:'点画布放人物点，可加姓名和备注。',outline:'点画布放粉笔轮廓，可旋转、换姿势。',blood:'点画布放血迹，可选类型、方向、浓度。',delete:'点击要删的东西。'};
+  $('toolNote').textContent=notes[t]||'';$('toolHint').textContent={select:'选择',hand:'平移',room:'房间',door:'门',window:'窗',text:'文字',mark:'标记',path:'动线',char:'人物',outline:'轮廓',blood:'血迹',delete:'删除',place:'放置'}[t]||'';
+  cv.style.cursor=t==='hand'?'grab':t==='select'?'default':'crosshair';req();}
+$('tools').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setTool(b.dataset.t);});
+function makeObj(t,x,y){
+  const base={id:nid(),t,x,y};
+  if(t==='text')return Object.assign(base,{text:'文字',size:3,rot:0,bold:false});
+  if(t==='mark')return Object.assign(base,{kind:'x',label:'',note:''});
+  if(t==='char')return Object.assign(base,{name:'甲',initial:'',note:'',dark:false});
+  if(t==='outline')return Object.assign(base,{pose:'spread',rot:0,scale:1,label:'',note:''});
+  if(t==='blood')return Object.assign(base,{kind:'spatter',size:0.6,density:50,rot:0,seed:Math.floor(Math.random()*9999)+1});
+  return base;
+}
+cv.addEventListener('pointerdown',e=>{
+  if(e.button===1||space||tool==='hand'){drag={mode:'pan',sx:e.clientX,sy:e.clientY,ox:view.ox,oy:view.oy};cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';return;}
+  if(e.button!==0||preview)return;
+  const [x,y]=toW(e);cv.setPointerCapture(e.pointerId);
+  if(tool==='room'){drag={mode:'room',x0:snap(x,0.5),y0:snap(y,0.5),x1:snap(x,0.5),y1:snap(y,0.5)};return;}
+  if(tool==='door'||tool==='window'){const ne=nearestEdge(x,y,0.4);if(!ne){toast('请点在墙上');return;}
+    const op={id:nid(),t:'open',kind:tool==='door'?'door':'window',room:ne.ed.r.id,o:ne.ed.o,out:ne.ed.out,pos:snap(ne.pos,0.05),len:tool==='door'?0.9:1.2,side:-ne.ed.out,hinge:1};
+    F().objs.push(op);sel=op.id;commit();renderProps();req();return;}
+  if(tool==='path'){if(!pathDraft)pathDraft=[];pathDraft.push([snap(x,0.05),snap(y,0.05)]);req();return;}
+  if(tool==='place'&&placing){const ob=Object.assign({},placing,{id:nid(),x:snap(x),y:snap(y)});F().objs.push(ob);sel=ob.id;commit();renderProps();req();return;}
+  if(['text','mark','char','outline','blood'].includes(tool)){const ob=makeObj(tool,snap(x,0.05),snap(y,0.05));F().objs.push(ob);sel=ob.id;commit();renderProps();req();setTool('select');return;}
+  if(tool==='delete'){const o=hit(x,y);if(o){F().objs=F().objs.filter(q=>q!==o);if(sel===o.id)sel=null;commit();renderProps();req();}return;}
+  /* select */
+  const s=selObj();
+  if(s&&s.t==='room'){const hs=[[s.x,s.y,'nw'],[s.x+s.w,s.y,'ne'],[s.x+s.w,s.y+s.h,'se'],[s.x,s.y+s.h,'sw']],tol=8/view.k;
+    for(const h of hs)if(Math.hypot(x-h[0],y-h[1])<tol){drag={mode:'resize',o:s,c:h[2],orig:{x:s.x,y:s.y,w:s.w,h:s.h}};return;}}
+  if(s&&s.t==='path'){const tol=8/view.k;for(let i=0;i<s.pts.length;i++)if(Math.hypot(x-s.pts[i][0],y-s.pts[i][1])<tol){drag={mode:'vertex',o:s,i};return;}}
+  const o=hit(x,y);sel=o?o.id:null;renderProps();
+  if(o){if(o.t==='open'){drag={mode:'open',o};}else if(o.t==='path'){drag={mode:'move',o,sx:x,sy:y,orig:o.pts.map(p=>p.slice())};}else drag={mode:'move',o,sx:x,sy:y,ox:o.x,oy:o.y};drag.moved=false;}
+  req();
+});
+cv.addEventListener('pointermove',e=>{
+  const [x,y]=toW(e);hover=[snap(x,0.05),snap(y,0.05)];
+  if(!drag){if(placing||pathDraft||tool==='door'||tool==='window')req();return;}
+  if(drag.mode==='pan'){view.ox=drag.ox+e.clientX-drag.sx;view.oy=drag.oy+e.clientY-drag.sy;req();return;}
+  if(drag.mode==='room'){drag.x1=snap(x,0.5);drag.y1=snap(y,0.5);req();return;}
+  drag.moved=true;const o=drag.o;
+  if(drag.mode==='move'){if(o.t==='room'){o.x=snap(drag.ox+x-drag.sx,0.5);o.y=snap(drag.oy+y-drag.sy,0.5);}else if(o.t==='path'){const dx=snap(x-drag.sx,0.05),dy=snap(y-drag.sy,0.05);o.pts=drag.orig.map(p=>[p[0]+dx,p[1]+dy]);}else{o.x=snap(drag.ox+x-drag.sx,0.05);o.y=snap(drag.oy+y-drag.sy,0.05);}}
+  else if(drag.mode==='resize'){const r=drag.orig,c=drag.c;let x0=r.x,y0=r.y,x1=r.x+r.w,y1=r.y+r.h;if(c.includes('w'))x0=snap(x,0.5);if(c.includes('e'))x1=snap(x,0.5);if(c.includes('n'))y0=snap(y,0.5);if(c.includes('s'))y1=snap(y,0.5);if(x1-x0>=0.5&&y1-y0>=0.5){o.x=x0;o.y=y0;o.w=x1-x0;o.h=y1-y0;}}
+  else if(drag.mode==='vertex'){o.pts[drag.i]=[snap(x,0.05),snap(y,0.05)];}
+  else if(drag.mode==='open'){const ne=nearestEdge(x,y,0.6);if(ne){o.room=ne.ed.r.id;o.o=ne.ed.o;o.out=ne.ed.out;o.pos=snap(ne.pos,0.05);}}
+  syncPos();req();
+});
+const endDrag=e=>{if(!drag)return;const d=drag;drag=null;cv.style.cursor=tool==='hand'?'grab':tool==='select'?'default':'crosshair';
+  if(d.mode==='room'){const r=normRect(d);if(r.w>=0.5&&r.h>=0.5){const ob={id:nid(),t:'room',x:r.x,y:r.y,w:r.w,h:r.h,name:ROOM_NAMES[rooms().length%ROOM_NAMES.length],note:'',kind:'room'};F().objs.push(ob);sel=ob.id;commit();renderProps();}req();return;}
+  if(d.moved)commit();req();};
+cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+cv.addEventListener('dblclick',e=>{if(tool==='path'&&pathDraft){finishPath();return;}const [x,y]=toW(e);const o=hit(x,y);if(o&&o.t==='room'){sel=o.id;renderProps();const i=$('p_name');if(i){i.focus();i.select();}}});
+function finishPath(){if(pathDraft&&pathDraft.length>=2){const ob={id:nid(),t:'path',pts:pathDraft,label:'',solid:false};F().objs.push(ob);sel=ob.id;commit();renderProps();}pathDraft=null;req();}
+window.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='textarea'||tag==='select'){if(e.key==='Escape')e.target.blur();return;}
+  const mod=e.ctrlKey||e.metaKey;
+  if(e.code==='Space'){space=true;e.preventDefault();return;}
+  if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
+  if(e.key==='Escape'){if(pathDraft){pathDraft=null;req();}else if(tool!=='select')setTool('select');else{sel=null;renderProps();req();}return;}
+  if(e.key==='Enter'&&pathDraft){finishPath();return;}
+  const o=selObj();if(!o)return;
+  if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();dup();return;}
+  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();del();return;}
+  if(e.key.toLowerCase()==='r'&&o.rot!=null){o.rot=((o.rot||0)+(e.shiftKey?-90:90)+360)%360;commit();renderProps();req();return;}
+  const st=e.shiftKey?0.5:0.05,mv={ArrowLeft:[-st,0],ArrowRight:[st,0],ArrowUp:[0,-st],ArrowDown:[0,st]}[e.key];
+  if(mv){e.preventDefault();if(o.t==='path')o.pts=o.pts.map(p=>[p[0]+mv[0],p[1]+mv[1]]);else if(o.t==='open')o.pos+=mv[0]||mv[1];else{o.x+=mv[0];o.y+=mv[1];}syncPos();req();clearTimeout(window.__nt);window.__nt=setTimeout(commit,400);}
+});
+window.addEventListener('keyup',e=>{if(e.code==='Space')space=false;});
+function dup(){const o=selObj();if(!o||o.t==='open')return;const c=JSON.parse(JSON.stringify(o));c.id=nid();if(c.t==='path')c.pts=c.pts.map(p=>[p[0]+0.5,p[1]+0.5]);else{c.x+=0.5;c.y+=0.5;}if(c.seed)c.seed+=1;F().objs.push(c);sel=c.id;commit();renderProps();req();}
+function del(){const o=selObj();if(!o)return;F().objs=F().objs.filter(q=>q!==o);if(o.t==='room')F().objs=F().objs.filter(q=>!(q.t==='open'&&q.room===o.id));sel=null;commit();renderProps();req();}
+
+/* ================= catalogue UI ================= */
+function buildCat(){
+  $('cat').innerHTML=CAT.map(c=>`<button data-c="${c.id}" title="${c.n} ${c.w}×${c.h} m"><canvas width="68" height="68"></canvas>${c.n}</button>`).join('');
+  [...$('cat').children].forEach(b=>{const c=catById(b.dataset.c),cc=b.querySelector('canvas').getContext('2d');cc.scale(2,2);const s=26/Math.max(c.w,c.h);
+    const R=new Canv(cc,{k:s,pmm:0.9,ox:17,oy:17,hand:false,denom:100});R.c.strokeStyle='#111';c.d(local(R,{x:0,y:0,rot:0}),c.w,c.h,{hand:false});});
+}
+$('cat').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const c=catById(b.dataset.c);setTool('place');placing={t:'furn',kind:c.id,w:c.w,h:c.h,rot:0,label:''};b.setAttribute('aria-pressed','true');$('toolNote').textContent='点画布放置「'+c.n+'」。可连续放置，Esc 结束。';});
+
+/* ================= properties ================= */
+const sl=(k,label,min,max,step,v)=>`<label class="row r3" for="p_${k}"><span>${label}</span><input type="range" id="p_${k}" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${v}"><output>${v}</output></label>`;
+const tx=(k,label,v,ph)=>`<label class="row" for="p_${k}"><span>${label}</span><input type="text" id="p_${k}" data-k="${k}" value="${esc(v||'')}" placeholder="${ph||''}"></label>`;
+const nm=(k,label,v,step,min)=>`<label for="p_${k}">${label}<input type="number" id="p_${k}" data-k="${k}" value="${r2(v)}" step="${step||0.05}" min="${min!=null?min:''}"></label>`;
+const selc=(k,label,v,opts)=>`<label class="row" for="p_${k}"><span>${label}</span><select id="p_${k}" data-k="${k}">${opts.map(o=>`<option value="${o[0]}"${o[0]===v?' selected':''}>${o[1]}</option>`).join('')}</select></label>`;
+function renderProps(){
+  const o=selObj(),el=$('props');
+  if(!o){el.innerHTML='<section class="sec"><h2><i class="gl c"></i>属性</h2><p class="note">点选画布上的房间、门窗、家具或标记，这里出现它的设置。</p></section>';return;}
+  let h='';
+  if(o.t==='room')h=`<section class="sec"><h2><i class="gl c"></i>房间 ${P.numbering?circ(rooms().indexOf(o)+1):''}</h2>
+    ${tx('name','名称',o.name)}
+    <div class="chips">${ROOM_NAMES.slice(0,14).map(n=>`<button data-nm="${n}">${n}</button>`).join('')}</div>
+    ${tx('note','图例备注',o.note,'例：死者的房间 / 上锁')}
+    ${selc('kind','类型',o.kind||'room',[['room','房间'],['balcony','阳台（外侧栏杆）'],['court','庭院 / 露台（虚线）']])}
+    <div class="pair">${nm('x','X m',o.x,0.5)}${nm('y','Y m',o.y,0.5)}</div>
+    <div class="pair">${nm('w','宽 m',o.w,0.5,0.5)}${nm('h','高 m',o.h,0.5,0.5)}</div>
+    <p class="note">面积 ${(o.w*o.h).toFixed(2)} m²。尺寸为墙中线尺寸。</p></section>`;
+  else if(o.t==='open')h=`<section class="sec"><h2><i class="gl c"></i>${o.kind==='window'?'窗':'门'}</h2>
+    ${selc('kind','类型',o.kind,[['door','单开门'],['double','双开门'],['sliding','推拉门'],['arch','门洞 / 拱门'],['window','窗']])}
+    <div class="pair">${nm('len','宽 m',o.len,0.1,0.4)}${nm('pos','位置 m',o.pos,0.05)}</div>
+    ${o.kind==='door'||o.kind==='double'?`<div class="chips"><button data-act="flipSide">翻转开向</button><button data-act="flipHinge">换铰链侧</button></div>`:''}
+    <p class="note">拖动可沿墙移动，也可拖到别的墙上。</p></section>`;
+  else if(o.t==='furn'){const c=catById(o.kind);h=`<section class="sec"><h2><i class="gl c"></i>${c?c.n:'家具'}</h2>
+    ${tx('label','标注文字',o.label,'可留空')}
+    <div class="pair">${nm('w','宽 m',o.w,0.05,0.1)}${nm('h','深 m',o.h,0.05,0.1)}</div>
+    ${sl('rot','旋转 °',0,359,1,o.rot||0)}
+    <div class="chips"><button data-act="rot90">转 90°</button><button data-act="reset">恢复原尺寸</button></div></section>`;}
+  else if(o.t==='text')h=`<section class="sec"><h2><i class="gl c"></i>文字</h2>${tx('text','内容',o.text)}${sl('size','字号 mm',1.5,10,0.5,o.size||3)}${sl('rot','旋转 °',-180,180,5,o.rot||0)}<div class="chk"><label for="p_bold"><input type="checkbox" id="p_bold" data-k="bold"${o.bold?' checked':''}> 粗体</label></div></section>`;
+  else if(o.t==='mark')h=`<section class="sec"><h2><i class="gl c"></i>标记</h2>${selc('kind','符号',o.kind,[['x','✕ 叉'],['star','★ 星'],['dot','● 实点'],['ring','○ 圈'],['q','? 问号'],['tri','▲ 三角'],['num','数字 / 字母']])}${tx('label',o.kind==='num'?'数字':'旁注',o.label)}${tx('note','图例备注',o.note,'例：凶器发现处')}</section>`;
+  else if(o.t==='path')h=`<section class="sec"><h2><i class="gl c"></i>动线</h2>${tx('label','标注',o.label,'例：凶手路线')}<div class="chk"><label for="p_solid"><input type="checkbox" id="p_solid" data-k="solid"${o.solid?' checked':''}> 实线</label></div><p class="note">拖动方块可改节点。</p></section>`;
+  else if(o.t==='char')h=`<section class="sec"><h2><i class="gl c"></i>人物</h2>${tx('name','姓名',o.name)}${tx('initial','圆内字',o.initial,'留空取姓名首字')}${tx('note','图例备注',o.note,'例：案发时在此')}<div class="chk"><label for="p_dark"><input type="checkbox" id="p_dark" data-k="dark"${o.dark?' checked':''}> 反白（黑底）</label></div></section>`;
+  else if(o.t==='outline')h=`<section class="sec"><h2><i class="gl c"></i>粉笔轮廓</h2>${selc('pose','姿势',o.pose,[['spread','仰卧 · 张开'],['side','侧卧'],['curl','蜷缩']])}${sl('rot','旋转 °',0,359,1,o.rot||0)}${sl('scale','大小',0.5,1.6,0.05,o.scale||1)}${tx('label','旁注',o.label,'例：死者')}${tx('note','图例备注',o.note)}</section>`;
+  else if(o.t==='blood')h=`<section class="sec"><h2><i class="gl c"></i>血迹</h2>${selc('kind','类型',o.kind,[['spatter','喷溅（有方向）'],['drip','滴落'],['pool','血泊'],['smear','拖痕（有方向）'],['prints','脚印（有方向）']])}${sl('size','范围 m',0.2,3,0.05,o.size||0.6)}${sl('density','浓度',5,100,1,o.density||50)}${sl('rot','方向 °',0,359,1,o.rot||0)}<div class="chips"><button data-act="reseed">换一个随机形态</button></div><p class="note">黑白印刷用实心黑。图例里不列出血迹。</p></section>`;
+  h+=`<section class="sec"><div class="chips"><button data-act="dup">复制</button><button data-act="del">删除</button>${o.t!=='room'&&o.t!=='open'?'<button data-act="front">移到最前</button><button data-act="back">移到最后</button>':''}</div></section>`;
+  el.innerHTML=h;
+}
+function syncPos(){const o=selObj();if(!o)return;['x','y','w','h','pos'].forEach(k=>{const e=$('p_'+k);if(e&&o[k]!=null&&document.activeElement!==e)e.value=r2(o[k]);});}
+const PR=$('props');
+PR.addEventListener('input',e=>{const t=e.target,k=t.dataset.k,o=selObj();if(!k||!o)return;let v=t.type==='checkbox'?t.checked:t.value;
+  if(t.type==='range'||t.type==='number'){v=parseFloat(v);if(!isFinite(v))return;if(t.min!=='')v=Math.max(+t.min,v);}
+  o[k]=v;const out=t.parentElement.querySelector('output');if(out)out.textContent=t.value;req();});
+PR.addEventListener('change',e=>{if(e.target.dataset.k){const o=selObj();if(o&&o.t==='open'&&e.target.dataset.k==='kind'){o.len=o.kind==='double'?1.6:o.kind==='window'?1.2:0.9;}commit();if(e.target.dataset.k==='kind')renderProps();}});
+PR.addEventListener('click',e=>{const b=e.target.closest('button'),o=selObj();if(!b||!o)return;
+  if(b.dataset.nm){o.name=b.dataset.nm;$('p_name').value=o.name;commit();req();return;}
+  const a=b.dataset.act;
+  if(a==='dup')dup();else if(a==='del')del();
+  else if(a==='front'){F().objs=F().objs.filter(q=>q!==o);F().objs.push(o);commit();req();}
+  else if(a==='back'){F().objs=F().objs.filter(q=>q!==o);F().objs.unshift(o);commit();req();}
+  else if(a==='flipSide'){o.side=-(o.side||1);commit();req();}
+  else if(a==='flipHinge'){o.hinge=-(o.hinge||1);commit();req();}
+  else if(a==='rot90'){o.rot=((o.rot||0)+90)%360;commit();renderProps();req();}
+  else if(a==='reset'){const c=catById(o.kind);if(c){o.w=c.w;o.h=c.h;}commit();renderProps();req();}
+  else if(a==='reseed'){o.seed=Math.floor(Math.random()*99999)+1;commit();req();}
+});
+
+/* ================= floors ================= */
+function renderFloors(){$('floors').innerHTML=P.floors.map((f,i)=>`<button data-f="${i}" aria-pressed="${i===cur}">${esc(f.name)}</button>`).join('')+'<button class="add" data-f="add">＋ 加一层</button>';$('flName').value=F().name;}
+$('floors').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.f==='add'){P.floors.push(newFloor(['一楼','二楼','三楼','四楼','地下室','阁楼','屋顶'][P.floors.length]||('第'+(P.floors.length+1)+'层')));cur=P.floors.length-1;}else cur=+b.dataset.f;sel=null;renderFloors();renderProps();commit();fit();});
+$('flRename').onclick=()=>{F().name=$('flName').value.trim()||F().name;renderFloors();commit();req();};
+$('flDel').onclick=()=>{if(P.floors.length<=1){toast('至少保留一层');return;}P.floors.splice(cur,1);cur=Math.max(0,cur-1);sel=null;renderFloors();renderProps();commit();fit();};
+
+/* ================= settings UI ================= */
+document.querySelectorAll('[data-s]').forEach(el=>el.addEventListener('input',e=>{const k=el.dataset.s;let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='number'||el.type==='range'||el.dataset.n){v=parseFloat(v);if(!isFinite(v))return;}P[k]=v;if(k==='north')$('northOut').textContent=v+'°';save();req();}));
+document.querySelectorAll('[data-seg]').forEach(g=>g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P[g.dataset.seg]=b.dataset.v;syncUI();commit();req();}));
+function syncUI(){document.querySelectorAll('[data-s]').forEach(el=>{const k=el.dataset.s;if(el.type==='checkbox')el.checked=!!P[k];else el.value=P[k];});document.querySelectorAll('[data-seg]').forEach(g=>[...g.children].forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===P[g.dataset.seg]))));$('northOut').textContent=(P.north||0)+'°';renderFloors();}
+$('btnPreview').onclick=()=>{preview=!preview;$('btnPreview').setAttribute('aria-pressed',String(preview));view.zoom=1;$('hint').textContent=preview?'版面预览：这就是导出的样子':'滚轮缩放 · 空格+拖动平移 · 双击房间改名';req();};
+
+/* ================= history / storage ================= */
+let hist=[],hi=-1,saveT=0;
+function serial(){return JSON.stringify({P,cur,uid});}
+function commit(){hist=hist.slice(0,hi+1);hist.push(serial());if(hist.length>80)hist.shift();hi=hist.length-1;syncUndo();save();}
+function restore(s){const o=JSON.parse(s);P=o.P;cur=Math.min(o.cur,P.floors.length-1);uid=o.uid;sel=null;syncUI();renderProps();req();}
+function undo(){if(hi>0){hi--;restore(hist[hi]);syncUndo();}}function redo(){if(hi<hist.length-1){hi++;restore(hist[hi]);syncUndo();}}
+function syncUndo(){$('btnUndo').disabled=hi<=0;$('btnRedo').disabled=hi>=hist.length-1;}
+$('btnUndo').onclick=undo;$('btnRedo').onclick=redo;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(LS,serial());}catch(_){}} ,400);}
+function load(){try{const s=localStorage.getItem(LS);if(s){const o=JSON.parse(s);if(o&&o.P&&o.P.floors){P=Object.assign({},DEF,o.P);cur=Math.min(o.cur||0,P.floors.length-1);uid=o.uid||1000;return true;}}}catch(_){}return false;}
+let toastT=0;function toast(m,ms){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,ms||3400);}
+
+/* ================= export ================= */
+async function saveFile(name,blob){
+  let dl=null;try{if(window.claude&&window.claude.use)dl=await window.claude.use('downloads');}catch(_){}
+  if(dl){try{await dl.save({filename:name,data:blob});toast('已保存：'+name);}catch(err){const c=err&&err.code;toast(c==='declined'?'已取消保存':'此环境无法保存文件（'+(c||'unknown')+'）',4000);}return;}
+  const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('已生成：'+name);
+}
+const clean=t=>String(t).replace(/[^\w\u4e00-\u9fff]+/g,'_').replace(/^_+|_+$/g,'').slice(0,24)||'plan';
+const fname=ext=>`KS_plan_${clean(P.tName)}_${clean(F().name)}_${P.style}.${ext}`;
+$('btnPng').onclick=async()=>{const dpi=+$('dpi').value,fl=F(),sp=sheetSpec(fl),pxPerMm=dpi/25.4,c=document.createElement('canvas');c.width=Math.round(sp.W*pxPerMm);c.height=Math.round(sp.H*pxPerMm);
+  if(c.width*c.height>80e6){toast('尺寸过大，请降低 DPI');return;}
+  if(document.fonts&&document.fonts.load){try{await Promise.all([document.fonts.load('700 20px "Noto Sans SC"','图'),document.fonts.load('400 20px "LXGW WenKai TC"','图')]);}catch(_){}}
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);composeSheet(o=>new Canv(x,o),fl,pxPerMm);
+  const b=await new Promise(r=>c.toBlob(r,'image/png'));if(b)saveFile(fname('png'),b);};
+$('btnSvg').onclick=()=>{const fl=F(),sp=sheetSpec(fl),pxPerMm=1,{R}=composeSheet(o=>new Svg(o),fl,pxPerMm);
+  const svg=`<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${sp.W}mm" height="${sp.H}mm" viewBox="0 0 ${sp.W} ${sp.H}">\n<!-- ${esc(P.tName)} · ${esc(fl.name)} · 1:${sp.denom} · made with K&S Grundwerk -->\n<rect width="100%" height="100%" fill="#fff"/>\n${R.out.join('\n')}\n</svg>`;
+  saveFile(fname('svg'),new Blob([svg],{type:'image/svg+xml'}));};
+$('btnSave').onclick=()=>saveFile(fname('json').replace(/_(draft|hand)\.json$/,'.json'),new Blob([JSON.stringify({app:'ks-grundwerk',v:1,P,uid},null,1)],{type:'application/json'}));
+$('btnLoad').onclick=()=>$('fileJson').click();
+$('fileJson').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const o=JSON.parse(await f.text());if(!o.P||!o.P.floors)throw 0;P=Object.assign({},DEF,o.P);uid=o.uid||5000;cur=0;sel=null;syncUI();renderProps();commit();fit();toast('已载入 '+f.name);}catch(_){toast('不是 Grundwerk 的工程文件');}};
+$('btnNew').onclick=()=>{P=Object.assign({},DEF,{floors:[newFloor('一楼')]});cur=0;sel=null;syncUI();renderProps();commit();fit();};
+$('btnSample').onclick=()=>{P=sample();cur=0;sel=null;syncUI();renderProps();commit();fit();};
+
+/* ================= sample ================= */
+function sample(){
+  const f=newFloor('三楼'),o=f.objs,add=x=>{x.id=nid();o.push(x);return x;};
+  const R=(x,y,w,h,name,note,kind)=>add({t:'room',x,y,w,h,name,note:note||'',kind:kind||'room'});
+  const hall=R(0,0,1.5,4,'玄关'),liv=R(1.5,0,4.5,4,'客厅','案发当晚聚会所在'),kit=R(6,0,3,2.5,'厨房'),bath=R(6,2.5,3,1.5,'浴室','门从内反锁');
+  const bed=R(0,4,3.5,3.5,'主卧','房东夫妇'),study=R(3.5,4,2.5,3.5,'书房','发现尸体处'),guest=R(6,4,3,3.5,'客房','访客 K 借宿');
+  const balc=R(1.5,-1.2,4.5,1.2,'阳台','','balcony');
+  const D=(room,oo,out,pos,kind,side,hinge,len)=>add({t:'open',kind:kind||'door',room:room.id,o:oo,out,pos,len:len||(kind==='double'?1.6:kind==='window'?1.2:0.9),side:side||-out,hinge:hinge||1});
+  D(hall,'v',-1,2.0,'door',1,-1);            // front door on the west wall of the hall
+  D(hall,'v',1,2.6,'arch',-1,1,1.2);         // hall → living
+  D(liv,'v',1,1.2,'door',1,1);               // living → kitchen
+  D(bath,'v',-1,3.25,'door',-1,-1,0.8);      // living → bath
+  D(bed,'h',-1,2.5,'door',1,-1);             // living → bedroom
+  D(study,'h',-1,4.6,'door',1,1,0.8);        // living → study
+  D(guest,'h',-1,7.2,'door',1,-1);           // living → guest
+  D(liv,'h',-1,4.0,'sliding',1,1,1.8);       // living → balcony
+  D(kit,'h',-1,7.6,'window',0,0,1.2);D(bed,'h',1,1.5,'window',0,0,1.5);D(study,'h',1,4.75,'window',0,0,1.2);D(guest,'v',1,5.5,'window',0,0,1.2);D(bath,'v',1,3.3,'window',0,0,0.6);
+  const Fn=(kind,x,y,rot,label,w,h)=>{const c=catById(kind);return add({t:'furn',kind,x,y,rot:rot||0,label:label||'',w:w||c.w,h:h||c.h});};
+  Fn('bed2',1.0,5.4,90);Fn('wardrobe',2.8,6.9,0);Fn('desk',5.0,4.5,0);Fn('chair',5.0,5.05,180);Fn('shelf',3.7,5.6,90);Fn('shelf',3.7,6.5,90);
+  Fn('bed1',8.4,5.6,0);Fn('desk',6.8,7.1,0);Fn('sofa',2.9,2.0,0);Fn('tableR',4.6,2.0,0,'',0.8,0.8);Fn('tv',2.9,0.4,0);Fn('rug',3.7,2.2,0,'',2.6,1.8);
+  Fn('counter',6.7,0.4,0,'',1.4,0.6);Fn('stove',7.7,0.4,0);Fn('sink',8.5,0.4,0);Fn('fridge',8.6,1.8,0);Fn('tub',8.5,3.2,90,'',0.7,1.5);Fn('toilet',6.5,2.9,0);Fn('basin',7.3,2.9,0);
+  Fn('plant',5.6,3.6,0);Fn('bench',3.7,-0.6,0);Fn('column',0.9,3.4,0,'',0.3,0.3);
+  add({t:'outline',x:4.7,y:6.3,pose:'spread',rot:70,scale:0.9,label:'死者',note:'23:40 被发现，面朝书桌'});
+  add({t:'blood',x:4.75,y:6.35,kind:'pool',size:0.55,density:50,rot:0,seed:41});
+  add({t:'blood',x:5.2,y:5.4,kind:'spatter',size:0.7,density:60,rot:300,seed:17});
+  add({t:'blood',x:4.1,y:6.9,kind:'prints',size:0.5,density:50,rot:200,seed:5});
+  add({t:'mark',x:5.75,y:5.0,kind:'x',label:'',note:'台灯，灯罩碎裂'});
+  add({t:'mark',x:8.3,y:6.4,kind:'star',label:'',note:'窗闩内侧有划痕'});
+  add({t:'char',x:3.2,y:2.9,name:'K',initial:'K',note:'自称一直在客厅',dark:false});
+  add({t:'char',x:1.6,y:6.3,name:'房东',initial:'房',note:'',dark:true});
+  add({t:'path',pts:[[0.3,2.0],[0.75,2.0],[0.75,3.2],[3.9,3.2],[3.9,4.3],[4.5,5.2]],label:'推定路线',solid:false});
+  add({t:'text',x:3.75,y:-1.6,text:'临街 · 榆树街',size:2.4,rot:0,bold:false});
+  const f2=newFloor('四楼 · 阁楼');const o2=f2.objs,add2=x=>{x.id=nid();o2.push(x);return x;};
+  const attic=add2({t:'room',x:1.5,y:0,w:4.5,h:4,name:'阁楼',note:'堆放旧物，钥匙由房东保管',kind:'room'}),tr=add2({t:'room',x:6,y:0,w:1.5,h:4,name:'露台',note:'',kind:'court'});
+  add2({t:'open',kind:'door',room:attic.id,o:'v',out:1,pos:2.0,len:0.8,side:-1,hinge:1});add2({t:'open',kind:'window',room:attic.id,o:'h',out:-1,pos:3.75,len:1.0,side:1,hinge:1});
+  add2({t:'furn',kind:'coffin',x:2.3,y:2.0,rot:0,label:'木箱',w:0.6,h:1.9});add2({t:'furn',kind:'stairs',x:5.4,y:2.0,rot:0,label:'',w:0.9,h:2.6});add2({t:'mark',x:3.6,y:1.0,kind:'q',label:'',note:'脚印止于此'});
+  return Object.assign({},DEF,{tName:'榆树街 14 号 · 三楼',tSub:'《末班车之后》第七章 · 案发当夜平面示意',tAuthor:'作者名',north:20,floors:[f,f2]});
+}
+
+/* ================= boot ================= */
+buildCat();
+if(!load()){P=sample();uid=Math.max(uid,1000);}
+syncUI();setTool('select');renderProps();
+requestAnimationFrame(()=>{fit();hist=[serial()];hi=0;syncUndo();});
+})();
+</script>
+</body>
+</html>
