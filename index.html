@@ -244,6 +244,7 @@ table.syn td{border-bottom-color:var(--soft)}table.syn td:first-child{color:var(
         <button data-t="char"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-5 15-5 16 0"/></svg>人物</button>
         <button data-t="outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.5 1.5"><circle cx="6" cy="12" r="2.5"/><path d="M8.5 11h7l4-4M15.5 13l4 4M9 10l2-5M9 14l2 5"/></svg>轮廓</button>
         <button data-t="blood"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="13" r="4"/><circle cx="15" cy="9" r="2"/><circle cx="16" cy="15" r="1.3"/><circle cx="6" cy="6" r="1"/><circle cx="18" cy="19" r=".9"/></svg>血迹</button>
+        <button data-t="erase" title="点墙擦掉一段"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16l8-8 6 6-6 6H8z"/><path d="M12 8l4-4 6 6-4 4"/><path d="M4 20h16"/></svg>擦墙</button>
         <button data-t="delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13M10 11v6M14 11v6"/></svg>删除</button>
       </div>
       <p class="note" id="toolNote">拖出矩形画房间。房间之间共用的墙自动变薄，外墙自动变厚。</p>
@@ -473,6 +474,15 @@ function edgeSegs(ed){ // split by other rooms' coordinates, classify each
   for(let i=0;i<cs.length-1;i++){const m=(cs[i]+cs[i+1])/2;segs.push({s:cs[i],e:cs[i+1],ext:isExt(ed,m)});}
   return segs;
 }
+function roomAt(x,y){return rooms().find(r=>x>r.x+0.001&&x<r.x+r.w-0.001&&y>r.y+0.001&&y<r.y+r.h-0.001)||null;}
+const gaps=()=>F().objs.filter(o=>o.t==='gap');
+function cutByGaps(ed,segs){ // remove erased stretches from an edge's segments
+  const gs=gaps().filter(g=>g.o===ed.o&&Math.abs(g.a-ed.a)<1e-6);if(!gs.length)return segs;
+  const out=[];segs.forEach(sg=>{let parts=[[sg.s,sg.e]];gs.forEach(g=>{const nx=[];parts.forEach(([a,b])=>{if(g.e<=a+1e-6||g.s>=b-1e-6){nx.push([a,b]);return;}if(g.s>a+1e-6)nx.push([a,g.s]);if(g.e<b-1e-6)nx.push([g.e,b]);});parts=nx;});parts.forEach(([a,b])=>out.push(Object.assign({},sg,{s:a,e:b})));});
+  return out;
+}
+function nearestSeg(x,y,tol){ // nearest drawable wall sub-segment, for the eraser
+  let best=null;rooms().forEach(r=>edges(r).forEach(ed=>edgeSegs(ed).forEach(sg=>{const d=ed.o==='h'?Math.abs(y-ed.a):Math.abs(x-ed.a),al=ed.o==='h'?x:y;if(d<tol&&al>=sg.s-tol&&al<=sg.e+tol&&(!best||d<best.d))best={d,ed,sg};})));return best;}
 function nearestEdge(x,y,tol){let best=null;rooms().forEach(r=>edges(r).forEach(ed=>{const d=ed.o==='h'?Math.abs(y-ed.a):Math.abs(x-ed.a),along=ed.o==='h'?x:y;if(d<tol&&along>=ed.s-tol&&along<=ed.e+tol&&(!best||d<best.d))best={d,ed,pos:clamp(along,ed.s,ed.e)};}));return best;}
 function wallT(ed,pos){return isExt(ed,pos)?T_EXT:T_INT;}
 function openingEdge(op){ // resolve stored edge to current room geometry
@@ -481,7 +491,7 @@ function openingEdge(op){ // resolve stored edge to current room geometry
 }
 
 /* ================= drawing the plan ================= */
-const ZORD={room:0,blood:1,furn:2,open:3,outline:4,path:5,char:6,mark:7,text:8};
+const ZORD={gap:-1,room:0,blood:1,furn:2,open:3,outline:4,path:5,char:6,mark:7,text:8};
 function drawFloor(R,fl,o){
   o=o||{};const hand=R.hand,objs=fl.objs.slice().sort((a,b)=>ZORD[a.t]-ZORD[b.t]);
   const rs=objs.filter(x=>x.t==='room');
@@ -491,8 +501,9 @@ function drawFloor(R,fl,o){
   /* walls */
   const wallPoly=(ed,s,e,t)=>{const ext=t/2;if(ed.o==='h')return [ed.a-t/2,s-ext,e-s+2*ext,t,'h'];return [ed.a-t/2,s-ext,t,e-s+2*ext,'v'];};
   const walls=[];
-  rs.forEach(r=>edges(r).forEach(ed=>edgeSegs(ed).forEach(sg=>{
+  rs.forEach(r=>edges(r).forEach(ed=>cutByGaps(ed,edgeSegs(ed)).forEach(sg=>{
     const kind=r.kind||'room';
+    if(!sg.ext){const m=(sg.s+sg.e)/2,other=ed.o==='h'?roomAt(m,ed.a+ed.out*0.05):roomAt(ed.a+ed.out*0.05,m);if(kind==='annex'||(other&&other.kind==='annex'))return;} // annexes fuse into their neighbours
     if(kind==='court'){walls.push({ed,sg,style:'court'});return;}
     if(kind==='balcony'&&sg.ext){walls.push({ed,sg,style:'rail'});return;}
     walls.push({ed,sg,style:'wall',t:sg.ext?T_EXT:T_INT});
@@ -508,6 +519,7 @@ function drawFloor(R,fl,o){
   objs.filter(x=>x.t==='open').forEach(op=>{const ed=openingEdge(op);if(!ed)return;drawOpening(R,op,ed);});
   /* room labels */
   rs.forEach((r,i)=>{
+    if(r.kind==='annex')return;
     const cx=r.x+r.w/2,cy=r.y+r.h/2,sz=Math.min(2.7,Math.max(1.8,r.w*1000/R.denom/(r.name.length+1)*0.9)),area=r.w*r.h;
     const numOn=P.numbering&&r.kind!=='court';
     if(numOn){const n=rs.indexOf(r)+1,rr=1.9*R.denom/1000;R.circle(r.x+rr+0.12,r.y+rr+0.12,rr,{w:0.25,fill:'#fff'});R.text(r.x+rr+0.12,r.y+rr+0.12,String(n),{size:2.4,weight:700});}
@@ -625,7 +637,7 @@ const strMM=t=>[...t].reduce((a,c)=>a+(/[\u2e80-\u9fff\uff00-\uffef]/.test(c)?2.
 function legendCols(items,avail){if(items.length<=6||avail<130)return 1;const mx=Math.max(...items.map(strMM));return mx<=avail/2-4?2:1;}
 function legendItems(fl){
   const it=[];const rs=fl.objs.filter(o=>o.t==='room');
-  if(P.numbering)rs.forEach((r,i)=>{if(r.kind!=='court'||r.note)it.push(circ(i+1)+' '+r.name+(r.note?' — '+r.note:''));});
+  if(P.numbering)rs.forEach((r,i)=>{if(r.kind==='annex')return;if(r.kind!=='court'||r.note)it.push(circ(i+1)+' '+r.name+(r.note?' — '+r.note:''));});
   fl.objs.filter(o=>o.t==='char'&&(o.note||o.name)).forEach(o=>{const ini=(o.initial||o.name.slice(0,1)).slice(0,2);it.push((ini===o.name?ini:ini+' '+o.name)+(o.note?' — '+o.note:''));});
   fl.objs.filter(o=>o.t==='mark'&&o.note).forEach(o=>it.push({x:'✕',star:'★',dot:'●',ring:'○',q:'?',tri:'▲',num:o.label||'1'}[o.kind||'x']+' '+(o.label&&o.kind!=='num'?o.label+' — ':'')+o.note));
   fl.objs.filter(o=>o.t==='outline'&&o.note).forEach(o=>it.push('⌇ '+(o.label?o.label+' — ':'')+o.note));
@@ -646,10 +658,10 @@ function composeSheet(make,fl,pxPerMm){
   let y=H-M-(P.scalebar?8:0);
   if(sp.legendH){const items=legendItems(fl),cols=legendCols(items,W-2*M),rows=Math.ceil(items.length/cols),colW=(W-2*M)/cols;y-=sp.legendH;const l=mm(M,y+1);R.line(l[0],l[1],l[0]+(W-2*M)/sp.mmPerM,l[1],{w:0.3});
     items.forEach((s,i)=>{const c=Math.floor(i/rows),r=i%rows,p=mm(M+c*colW,y+5+r*4.2);R.text(p[0],p[1],s,{size:2.5,align:'left'});});}
-  if(P.scalebar){const y0=H-M-4,x0=M,segs=[0,1,2,3,4,5],u=sp.mmPerM;const a=mm(x0,y0);
-    for(let i=0;i<5;i++){const p=mm(x0+i*u,y0-1.2);R.rect(p[0],p[1],1,1.2/sp.mmPerM,{fill:i%2?'#fff':'#111',w:0.25});}
-    segs.forEach(i=>{const p=mm(x0+i*u,y0+1);R.text(p[0],p[1]+1.6/sp.mmPerM,i+(i===5?' m':''),{size:2,base:'top'});});
-    const s=mm(x0+5*u+6,y0-0.6);R.text(s[0],s[1],'1:'+sp.denom,{size:2.4,align:'left'});
+  if(P.scalebar){const y0=H-M-4,x0=M,u=sp.mmPerM,pick=[[5,1],[3,1],[2,0.5],[1,0.25],[0.5,0.1]].find(c=>c[0]*u<=(W-2*M)*0.45)||[0.5,0.1],tot=pick[0],st=pick[1],n=Math.round(tot/st);
+    for(let i=0;i<n;i++){const p=mm(x0+i*st*u,y0-1.2);R.rect(p[0],p[1],st,1.2/sp.mmPerM,{fill:i%2?'#fff':'#111',w:0.25});}
+    for(let i=0;i<=n;i++){const p=mm(x0+i*st*u,y0+1);const v=Math.round(i*st*100)/100;R.text(p[0],p[1]+1.6/sp.mmPerM,v+(i===n?' m':''),{size:2,base:'top'});}
+    const s=mm(x0+tot*u+6,y0-0.6);R.text(s[0],s[1],'1:'+sp.denom,{size:2.4,align:'left'});
     /* north arrow */
     const c=mm(W-M-5,y0-3),r=3.5/sp.mmPerM,a0=(P.north||0)*Math.PI/180-Math.PI/2;
     R.circle(c[0],c[1],r,{w:0.3});
@@ -689,6 +701,9 @@ function paint(){
   if(pathDraft){cx.strokeStyle='#2450DB';cx.setLineDash([6,4]);cx.lineWidth=1.5;cx.beginPath();pathDraft.forEach((p,i)=>i?cx.lineTo(view.ox+p[0]*view.k,view.oy+p[1]*view.k):cx.moveTo(view.ox+p[0]*view.k,view.oy+p[1]*view.k));if(hover)cx.lineTo(view.ox+hover[0]*view.k,view.oy+hover[1]*view.k);cx.stroke();cx.setLineDash([]);}
   if(placing&&hover&&!drag){cx.globalAlpha=0.5;const ob=Object.assign({},placing,{x:hover[0],y:hover[1]});if(ob.t==='furn')drawFurn(R,ob);else if(ob.t==='outline')drawOutline(R,ob);else if(ob.t==='blood')drawBlood(R,ob);else if(ob.t==='char')drawChar(R,ob);else if(ob.t==='mark')drawMark(R,ob);cx.globalAlpha=1;}
   if((tool==='door'||tool==='window')&&hover){const ne=nearestEdge(hover[0],hover[1],0.4);if(ne){cx.fillStyle='#E5341F';const [x,y]=ne.ed.o==='h'?[ne.pos,ne.ed.a]:[ne.ed.a,ne.pos];cx.beginPath();cx.arc(view.ox+x*view.k,view.oy+y*view.k,5,0,7);cx.fill();}}
+  /* erased walls: dotted hint, editor only */
+  gaps().forEach(g=>{cx.strokeStyle='rgba(143,227,214,.9)';cx.setLineDash([3,4]);cx.lineWidth=1.5;cx.beginPath();if(g.o==='h'){cx.moveTo(view.ox+g.s*view.k,view.oy+g.a*view.k);cx.lineTo(view.ox+g.e*view.k,view.oy+g.a*view.k);}else{cx.moveTo(view.ox+g.a*view.k,view.oy+g.s*view.k);cx.lineTo(view.ox+g.a*view.k,view.oy+g.e*view.k);}cx.stroke();cx.setLineDash([]);});
+  if(tool==='erase'&&hover){const ns=nearestSeg(hover[0],hover[1],0.4);if(ns){cx.strokeStyle='#E6007E';cx.lineWidth=5;cx.lineCap='round';cx.beginPath();if(ns.ed.o==='h'){cx.moveTo(view.ox+ns.sg.s*view.k,view.oy+ns.ed.a*view.k);cx.lineTo(view.ox+ns.sg.e*view.k,view.oy+ns.ed.a*view.k);}else{cx.moveTo(view.ox+ns.ed.a*view.k,view.oy+ns.sg.s*view.k);cx.lineTo(view.ox+ns.ed.a*view.k,view.oy+ns.sg.e*view.k);}cx.stroke();}}
   /* selection */
   const s=selObj();if(s){cx.strokeStyle='#2450DB';cx.lineWidth=1.5;cx.setLineDash([5,3]);const bb=objBox(s);
     if(s.t==='room'){cx.strokeRect(view.ox+s.x*view.k,view.oy+s.y*view.k,s.w*view.k,s.h*view.k);cx.setLineDash([]);cx.fillStyle='#F5B916';cx.strokeStyle='#14151A';[[s.x,s.y],[s.x+s.w,s.y],[s.x+s.w,s.y+s.h],[s.x,s.y+s.h]].forEach(p=>{cx.fillRect(view.ox+p[0]*view.k-5,view.oy+p[1]*view.k-5,10,10);cx.strokeRect(view.ox+p[0]*view.k-5,view.oy+p[1]*view.k-5,10,10);});}
@@ -720,7 +735,7 @@ function objBox(o){
 function hit(x,y){
   const objs=F().objs.slice().sort((a,b)=>ZORD[b.t]-ZORD[a.t]),tol=6/view.k;
   for(const o of objs){
-    if(o.t==='room')continue;
+    if(o.t==='room'||o.t==='gap')continue;
     if(o.t==='path'){for(let i=0;i<o.pts.length-1;i++)if(distSeg(x,y,o.pts[i],o.pts[i+1])<tol)return o;continue;}
     const b=objBox(o);if(x>=b.x0-tol&&x<=b.x1+tol&&y>=b.y0-tol&&y<=b.y1+tol)return o;
   }
@@ -737,8 +752,8 @@ const snap=(v,g)=>Math.round(v/(g||0.25))*(g||0.25);
 function toW(e){const r=cv.getBoundingClientRect();return [(e.clientX-r.left-view.ox)/view.k,(e.clientY-r.top-view.oy)/view.k];}
 function normRect(d){const x=Math.min(d.x0,d.x1),y=Math.min(d.y0,d.y1);return {x,y,w:Math.abs(d.x1-d.x0),h:Math.abs(d.y1-d.y0)};}
 function setTool(t){tool=t;placing=null;pathDraft=null;[...$('tools').children].forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)));[...$('cat').children].forEach(b=>b.setAttribute('aria-pressed','false'));
-  const notes={select:'点选、拖动。房间角点可拉伸。按住空格拖动可平移。',hand:'拖动画布平移。',room:'拖出矩形画房间。房间之间共用的墙自动变薄，外墙自动变厚。',door:'点墙放门。选中后可翻转开向和铰链侧。',window:'点墙放窗。',text:'点画布放文字。',mark:'点画布放标记：✕ ★ ● 等，可加说明。',path:'逐点点击画动线，双击或回车结束，Esc 取消。',char:'点画布放人物点，可加姓名和备注。',outline:'点画布放粉笔轮廓，可旋转、换姿势。',blood:'点画布放血迹，可选类型、方向、浓度。',delete:'点击要删的东西。'};
-  $('toolNote').textContent=notes[t]||'';$('toolHint').textContent={select:'选择',hand:'平移',room:'房间',door:'门',window:'窗',text:'文字',mark:'标记',path:'动线',char:'人物',outline:'轮廓',blood:'血迹',delete:'删除',place:'放置'}[t]||'';
+  const notes={select:'点选、拖动。房间角点可拉伸。按住空格拖动可平移。',hand:'拖动画布平移。',room:'拖出矩形画房间。房间之间共用的墙自动变薄，外墙自动变厚。',door:'点墙放门。选中后按 F 翻转开向，按 H 换铰链侧，右栏也有按钮。',window:'点墙放窗。',text:'点画布放文字。',mark:'点画布放标记：✕ ★ ● 等，可加说明。',path:'逐点点击画动线，双击或回车结束，Esc 取消。',char:'点画布放人物点，可加姓名和备注。',outline:'点画布放粉笔轮廓，可旋转、换姿势。',blood:'点画布放血迹，可选类型、方向、浓度。',erase:'点一段墙把它擦掉，再点一次恢复。擦掉两个房间之间的墙就能拼出 L 形。把房间类型设为「并入」可以连标签一起合并。',delete:'点击要删的东西。'};
+  $('toolNote').textContent=notes[t]||'';$('toolHint').textContent={select:'选择',hand:'平移',room:'房间',door:'门',window:'窗',text:'文字',mark:'标记',path:'动线',char:'人物',outline:'轮廓',blood:'血迹',erase:'擦墙',delete:'删除',place:'放置'}[t]||'';
   cv.style.cursor=t==='hand'?'grab':t==='select'?'default':'crosshair';req();}
 $('tools').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setTool(b.dataset.t);});
 function makeObj(t,x,y){
@@ -761,6 +776,10 @@ cv.addEventListener('pointerdown',e=>{
   if(tool==='path'){if(!pathDraft)pathDraft=[];pathDraft.push([snap(x,0.05),snap(y,0.05)]);req();return;}
   if(tool==='place'&&placing){const ob=Object.assign({},placing,{id:nid(),x:snap(x),y:snap(y)});F().objs.push(ob);sel=ob.id;commit();renderProps();req();return;}
   if(['text','mark','char','outline','blood'].includes(tool)){const ob=makeObj(tool,snap(x,0.05),snap(y,0.05));F().objs.push(ob);sel=ob.id;commit();renderProps();req();setTool('select');return;}
+  if(tool==='erase'){const ns=nearestSeg(x,y,0.4);if(!ns){toast('请点在墙上');return;}
+    const ex=gaps().find(g=>g.o===ns.ed.o&&Math.abs(g.a-ns.ed.a)<1e-6&&g.s<ns.sg.e-1e-6&&g.e>ns.sg.s+1e-6);
+    if(ex)F().objs=F().objs.filter(q=>q!==ex);else F().objs.push({id:nid(),t:'gap',o:ns.ed.o,a:ns.ed.a,s:ns.sg.s,e:ns.sg.e});
+    commit();req();return;}
   if(tool==='delete'){const o=hit(x,y);if(o){F().objs=F().objs.filter(q=>q!==o);if(sel===o.id)sel=null;commit();renderProps();req();}return;}
   /* select */
   const s=selObj();
@@ -773,7 +792,7 @@ cv.addEventListener('pointerdown',e=>{
 });
 cv.addEventListener('pointermove',e=>{
   const [x,y]=toW(e);hover=[snap(x,0.05),snap(y,0.05)];
-  if(!drag){if(placing||pathDraft||tool==='door'||tool==='window')req();return;}
+  if(!drag){if(placing||pathDraft||tool==='door'||tool==='window'||tool==='erase')req();return;}
   if(drag.mode==='pan'){view.ox=drag.ox+e.clientX-drag.sx;view.oy=drag.oy+e.clientY-drag.sy;req();return;}
   if(drag.mode==='room'){drag.x1=snap(x,0.5);drag.y1=snap(y,0.5);req();return;}
   drag.moved=true;const o=drag.o;
@@ -799,6 +818,8 @@ window.addEventListener('keydown',e=>{
   const o=selObj();if(!o)return;
   if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();dup();return;}
   if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();del();return;}
+  if(o.t==='open'&&e.key.toLowerCase()==='f'){o.side=-(o.side||1);commit();req();return;}
+  if(o.t==='open'&&e.key.toLowerCase()==='h'){o.hinge=-(o.hinge||1);commit();req();return;}
   if(e.key.toLowerCase()==='r'&&o.rot!=null){o.rot=((o.rot||0)+(e.shiftKey?-90:90)+360)%360;commit();renderProps();req();return;}
   const st=e.shiftKey?0.5:0.05,mv={ArrowLeft:[-st,0],ArrowRight:[st,0],ArrowUp:[0,-st],ArrowDown:[0,st]}[e.key];
   if(mv){e.preventDefault();if(o.t==='path')o.pts=o.pts.map(p=>[p[0]+mv[0],p[1]+mv[1]]);else if(o.t==='open')o.pos+=mv[0]||mv[1];else{o.x+=mv[0];o.y+=mv[1];}syncPos();req();clearTimeout(window.__nt);window.__nt=setTimeout(commit,400);}
@@ -828,14 +849,14 @@ function renderProps(){
     ${tx('name','名称',o.name)}
     <div class="chips">${ROOM_NAMES.slice(0,14).map(n=>`<button data-nm="${n}">${n}</button>`).join('')}</div>
     ${tx('note','图例备注',o.note,'例：死者的房间 / 上锁')}
-    ${selc('kind','类型',o.kind||'room',[['room','房间'],['balcony','阳台（外侧栏杆）'],['court','庭院 / 露台（虚线）']])}
+    ${selc('kind','类型',o.kind||'room',[['room','房间'],['annex','并入相邻房间（拼 L 形，无标签）'],['balcony','阳台（外侧栏杆）'],['court','庭院 / 露台（虚线）']])}
     <div class="pair">${nm('x','X m',o.x,0.5)}${nm('y','Y m',o.y,0.5)}</div>
     <div class="pair">${nm('w','宽 m',o.w,0.5,0.5)}${nm('h','高 m',o.h,0.5,0.5)}</div>
     <p class="note">面积 ${(o.w*o.h).toFixed(2)} m²。尺寸为墙中线尺寸。</p></section>`;
   else if(o.t==='open')h=`<section class="sec"><h2><i class="gl c"></i>${o.kind==='window'?'窗':'门'}</h2>
     ${selc('kind','类型',o.kind,[['door','单开门'],['double','双开门'],['sliding','推拉门'],['arch','门洞 / 拱门'],['window','窗']])}
     <div class="pair">${nm('len','宽 m',o.len,0.1,0.4)}${nm('pos','位置 m',o.pos,0.05)}</div>
-    ${o.kind==='door'||o.kind==='double'?`<div class="chips"><button data-act="flipSide">翻转开向</button><button data-act="flipHinge">换铰链侧</button></div>`:''}
+    ${o.kind!=='window'&&o.kind!=='arch'?`<div class="chips"><button data-act="flipSide">翻转开向 (F)</button>${o.kind!=='sliding'?'<button data-act="flipHinge">换铰链侧 (H)</button>':''}</div><p class="note">开向：门扇往墙的哪一边开。铰链侧：门轴在左端还是右端。</p>`:''}
     <p class="note">拖动可沿墙移动，也可拖到别的墙上。</p></section>`;
   else if(o.t==='furn'){const c=catById(o.kind);h=`<section class="sec"><h2><i class="gl c"></i>${c?c.n:'家具'}</h2>
     ${tx('label','标注文字',o.label,'可留空')}
