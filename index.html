@@ -121,6 +121,12 @@ input[type=range]::-moz-range-thumb{width:8px;height:12px;background:var(--yel);
 .sbar .sp{flex:1}
 .sbar .hint{color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 #cv{position:absolute;inset:40px 0 0 0;width:100%;height:calc(100% - 40px);display:block;touch-action:none;z-index:2;cursor:crosshair}
+.selbar{position:absolute;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:4;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:calc(100% - 24px);padding:6px 8px;background:rgba(7,16,28,.72);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--rule);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.selbar b{font:11px var(--mono);color:var(--mut);align-self:center;padding:0 4px;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.selbar button{border:1px solid var(--rule);background:rgba(8,22,30,.5);color:var(--ink);border-radius:3px;font-size:13px;padding:6px 11px;min-height:34px;touch-action:manipulation}
+.selbar button:hover{background:rgba(143,227,214,.2);color:#fff}
+.selbar button.warn:hover{background:rgba(235,187,208,.25)}
+@media (max-width:640px){.selbar{flex-wrap:nowrap;overflow-x:auto;max-width:calc(100% - 16px);gap:5px;padding:5px 6px}.selbar b{display:none}.selbar button{padding:6px 9px;font-size:12px;white-space:nowrap}}
 .toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:50;background:var(--ink);color:var(--panel);padding:9px 16px;font-size:13px;border:2px solid var(--yel);box-shadow:4px 4px 0 var(--red);max-width:calc(100% - 32px)}
 
 @media (max-width:1100px){
@@ -253,7 +259,7 @@ table.syn td{border-bottom-color:var(--soft)}table.syn td:first-child{color:var(
     <section class="sec">
       <h2><i class="gl t"></i>家具与结构 <em>点选后到画布上放</em></h2>
       <div class="cat" id="cat"></div>
-      <p class="note">放好后可拖动，按 R 旋转，Delete 删除，Ctrl+D 复制。</p>
+      <p class="note">放好后可拖动。选中后画布下方出现「转 90°」等按钮；键盘 R 旋转，Delete 删除，Ctrl+D 复制。</p>
     </section>
 
     <section class="sec">
@@ -280,6 +286,7 @@ table.syn td{border-bottom-color:var(--soft)}table.syn td:first-child{color:var(
       <span class="hint" id="hint">滚轮缩放 · 空格+拖动平移 · 双击房间改名</span>
     </div>
     <canvas id="cv"></canvas>
+    <div class="selbar" id="selbar" hidden role="toolbar" aria-label="选中对象操作"></div>
   </section>
 
   <aside id="right" aria-label="属性与版面">
@@ -755,7 +762,7 @@ function setTool(t){tool=t;placing=null;pathDraft=null;[...$('tools').children].
   const notes={select:'点选、拖动。房间角点可拉伸。按住空格拖动可平移。',hand:'拖动画布平移。',room:'拖出矩形画房间。房间之间共用的墙自动变薄，外墙自动变厚。',door:'点墙放门。选中后按 F 翻转开向，按 H 换铰链侧，右栏也有按钮。',window:'点墙放窗。',text:'点画布放文字。',mark:'点画布放标记：✕ ★ ● 等，可加说明。',path:'逐点点击画动线，双击或回车结束，Esc 取消。',char:'点画布放人物点，可加姓名和备注。',outline:'点画布放粉笔轮廓，可旋转、换姿势。',blood:'点画布放血迹，可选类型、方向、浓度。',erase:'点一段墙把它擦掉，再点一次恢复。擦掉两个房间之间的墙就能拼出 L 形。把房间类型设为「并入」可以连标签一起合并。',delete:'点击要删的东西。'};
   $('toolNote').textContent=notes[t]||'';$('toolHint').textContent={select:'选择',hand:'平移',room:'房间',door:'门',window:'窗',text:'文字',mark:'标记',path:'动线',char:'人物',outline:'轮廓',blood:'血迹',erase:'擦墙',delete:'删除',place:'放置'}[t]||'';
   cv.style.cursor=t==='hand'?'grab':t==='select'?'default':'crosshair';req();}
-$('tools').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setTool(b.dataset.t);});
+$('tools').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setTool(b.dataset.t);if(innerWidth<=1100&&b.dataset.t!=='select'&&b.dataset.t!=='hand')$('stage').scrollIntoView({behavior:'smooth',block:'start'});});
 function makeObj(t,x,y){
   const base={id:nid(),t,x,y};
   if(t==='text')return Object.assign(base,{text:'文字',size:3,rot:0,bold:false});
@@ -834,7 +841,7 @@ function buildCat(){
   [...$('cat').children].forEach(b=>{const c=catById(b.dataset.c),cc=b.querySelector('canvas').getContext('2d');cc.scale(2,2);const s=26/Math.max(c.w,c.h);
     const R=new Canv(cc,{k:s,pmm:0.9,ox:17,oy:17,hand:false,denom:100});R.c.strokeStyle='#111';c.d(local(R,{x:0,y:0,rot:0}),c.w,c.h,{hand:false});});
 }
-$('cat').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const c=catById(b.dataset.c);setTool('place');placing={t:'furn',kind:c.id,w:c.w,h:c.h,rot:0,label:''};b.setAttribute('aria-pressed','true');$('toolNote').textContent='点画布放置「'+c.n+'」。可连续放置，Esc 结束。';});
+$('cat').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const c=catById(b.dataset.c);setTool('place');placing={t:'furn',kind:c.id,w:c.w,h:c.h,rot:0,label:''};b.setAttribute('aria-pressed','true');$('toolNote').textContent='点画布放置「'+c.n+'」。可连续放置，Esc 结束。';if(innerWidth<=1100)$('stage').scrollIntoView({behavior:'smooth',block:'start'});});
 
 /* ================= properties ================= */
 const sl=(k,label,min,max,step,v)=>`<label class="row r3" for="p_${k}"><span>${label}</span><input type="range" id="p_${k}" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${v}"><output>${v}</output></label>`;
@@ -843,6 +850,7 @@ const nm=(k,label,v,step,min)=>`<label for="p_${k}">${label}<input type="number"
 const selc=(k,label,v,opts)=>`<label class="row" for="p_${k}"><span>${label}</span><select id="p_${k}" data-k="${k}">${opts.map(o=>`<option value="${o[0]}"${o[0]===v?' selected':''}>${o[1]}</option>`).join('')}</select></label>`;
 function renderProps(){
   const o=selObj(),el=$('props');
+  renderSelbar();
   if(!o){el.innerHTML='<section class="sec"><h2><i class="gl c"></i>属性</h2><p class="note">点选画布上的房间、门窗、家具或标记，这里出现它的设置。</p></section>';return;}
   let h='';
   if(o.t==='room')h=`<section class="sec"><h2><i class="gl c"></i>房间 ${P.numbering?circ(rooms().indexOf(o)+1):''}</h2>
@@ -872,6 +880,32 @@ function renderProps(){
   h+=`<section class="sec"><div class="chips"><button data-act="dup">复制</button><button data-act="del">删除</button>${o.t!=='room'&&o.t!=='open'?'<button data-act="front">移到最前</button><button data-act="back">移到最后</button>':''}</div></section>`;
   el.innerHTML=h;
 }
+/* floating bar over the canvas: the keyboard shortcuts as buttons, for phones and tablets */
+function renderSelbar(){
+  const o=selObj(),bar=$('selbar');if(!o){bar.hidden=true;bar.innerHTML='';return;}
+  const name=o.t==='room'?(o.name||'房间'):o.t==='open'?(o.kind==='window'?'窗':'门'):o.t==='furn'?((catById(o.kind)||{}).n||'家具'):{text:'文字',mark:'标记',path:'动线',char:'人物',outline:'轮廓',blood:'血迹'}[o.t]||'';
+  let h=`<b>${esc(name)}</b>`;
+  if(o.rot!=null)h+=`<button data-act="rot90" title="R">↻ 90°</button><button data-act="rotm90" title="Shift+R">↺ 90°</button>`;
+  if(o.t==='open'&&o.kind!=='window'&&o.kind!=='arch'){h+=`<button data-act="flipSide" title="F">翻转开向</button>`;if(o.kind!=='sliding')h+=`<button data-act="flipHinge" title="H">换铰链侧</button>`;}
+  if(o.t!=='open')h+=`<button data-act="dup" title="Ctrl+D">复制</button>`;
+  h+=`<button data-act="del" class="warn" title="Delete">删除</button>`;
+  if(window.innerWidth<=1100)h+=`<button data-act="props">属性</button>`;
+  bar.innerHTML=h;bar.hidden=false;
+}
+function doAct(a,o){
+  if(a==='dup')dup();else if(a==='del')del();
+  else if(a==='front'){F().objs=F().objs.filter(q=>q!==o);F().objs.push(o);commit();req();}
+  else if(a==='back'){F().objs=F().objs.filter(q=>q!==o);F().objs.unshift(o);commit();req();}
+  else if(a==='flipSide'){o.side=-(o.side||1);commit();req();}
+  else if(a==='flipHinge'){o.hinge=-(o.hinge||1);commit();req();}
+  else if(a==='rot90'){o.rot=((o.rot||0)+90)%360;commit();renderProps();req();}
+  else if(a==='rotm90'){o.rot=((o.rot||0)+270)%360;commit();renderProps();req();}
+  else if(a==='reset'){const c=catById(o.kind);if(c){o.w=c.w;o.h=c.h;}commit();renderProps();req();}
+  else if(a==='reseed'){o.seed=Math.floor(Math.random()*99999)+1;commit();req();}
+  else if(a==='props'){$('right').scrollIntoView({behavior:'smooth',block:'start'});}
+}
+$('selbar').addEventListener('click',e=>{const b=e.target.closest('button'),o=selObj();if(!b||!o)return;doAct(b.dataset.act,o);});
+$('selbar').addEventListener('pointerdown',e=>e.stopPropagation());
 function syncPos(){const o=selObj();if(!o)return;['x','y','w','h','pos'].forEach(k=>{const e=$('p_'+k);if(e&&o[k]!=null&&document.activeElement!==e)e.value=r2(o[k]);});}
 const PR=$('props');
 PR.addEventListener('input',e=>{const t=e.target,k=t.dataset.k,o=selObj();if(!k||!o)return;let v=t.type==='checkbox'?t.checked:t.value;
@@ -880,15 +914,7 @@ PR.addEventListener('input',e=>{const t=e.target,k=t.dataset.k,o=selObj();if(!k|
 PR.addEventListener('change',e=>{if(e.target.dataset.k){const o=selObj();if(o&&o.t==='open'&&e.target.dataset.k==='kind'){o.len=o.kind==='double'?1.6:o.kind==='window'?1.2:0.9;}commit();if(e.target.dataset.k==='kind')renderProps();}});
 PR.addEventListener('click',e=>{const b=e.target.closest('button'),o=selObj();if(!b||!o)return;
   if(b.dataset.nm){o.name=b.dataset.nm;$('p_name').value=o.name;commit();req();return;}
-  const a=b.dataset.act;
-  if(a==='dup')dup();else if(a==='del')del();
-  else if(a==='front'){F().objs=F().objs.filter(q=>q!==o);F().objs.push(o);commit();req();}
-  else if(a==='back'){F().objs=F().objs.filter(q=>q!==o);F().objs.unshift(o);commit();req();}
-  else if(a==='flipSide'){o.side=-(o.side||1);commit();req();}
-  else if(a==='flipHinge'){o.hinge=-(o.hinge||1);commit();req();}
-  else if(a==='rot90'){o.rot=((o.rot||0)+90)%360;commit();renderProps();req();}
-  else if(a==='reset'){const c=catById(o.kind);if(c){o.w=c.w;o.h=c.h;}commit();renderProps();req();}
-  else if(a==='reseed'){o.seed=Math.floor(Math.random()*99999)+1;commit();req();}
+  doAct(b.dataset.act,o);
 });
 
 /* ================= floors ================= */
